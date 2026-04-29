@@ -1,0 +1,59 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { Sidebar } from "@/components/sidebar";
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [bgIndex, setBgIndex] = useState(0);
+  const backgrounds = ["/olimpia.png", "/novoflex.png"];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBgIndex((prev) => (prev + 1) % backgrounds.length);
+    }, 60000); // Cambia cada 60 segundos
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex min-h-screen bg-background relative transition-colors duration-500">
+      {/* Background Alternante Ultra Fluido - Ahora visible en ambos temas con diferentes filtros */}
+      <div className="fixed inset-0 z-0 overflow-hidden bg-background">
+        {backgrounds.map((bg, index) => (
+          <div
+            key={bg}
+            className="absolute inset-0 will-change-opacity"
+            style={{
+              opacity: index === bgIndex ? 0.25 : 0,
+              transition: "opacity 30s ease-in-out",
+            }}
+          >
+            <Image
+              src={bg}
+              alt="Admin Background"
+              fill
+              priority
+              className="object-cover grayscale"
+            />
+          </div>
+        ))}
+        {/* Filtro Dinámico: Oscuro en Dark Mode, Grisáceo Transparente en Light Mode */}
+        <div className="absolute inset-0 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-[2px] dark:backdrop-brightness-[0.2]" />
+      </div>
+
+      {/* Barra Lateral estilo CUREX */}
+      <Sidebar />
+
+      {/* Contenido Principal */}
+      <main className="flex-1 p-8 lg:p-12 overflow-y-auto relative z-10">
+        <div className="max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
