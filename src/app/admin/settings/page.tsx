@@ -5,9 +5,7 @@ import {
   Settings, 
   Moon, 
   Sun, 
-  Palette, 
   Check, 
-  Layout, 
   ShieldCheck,
   Monitor
 } from "lucide-react";
@@ -16,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
-  const { theme, setTheme, brandColor, setBrandColor, colors } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="space-y-10 max-w-4xl">
@@ -34,79 +32,68 @@ export default function SettingsPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* MODO DE APARIENCIA */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Layout size={16} className="text-brand" />
-            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Apariencia</h2>
+      <div className="space-y-12 max-w-2xl">
+        {/* SECCIÓN: APARIENCIA */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-3 px-2">
+            <div className="h-[1px] w-4 bg-brand/30" />
+            <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Apariencia</h2>
           </div>
           
-          <Card className="bg-card border-border overflow-hidden shadow-soft">
-            <CardHeader className="bg-muted/30 border-b border-border p-4">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Modo de Interfaz</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => setTheme("dark")}
-                  className={cn(
-                    "flex-1 h-24 flex flex-col items-center justify-center gap-3 rounded-2xl transition-all duration-300",
-                    theme === "dark" 
-                      ? "bg-brand text-black shadow-[0_0_20px_rgba(184,115,51,0.2)]" 
-                      : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:bg-zinc-800"
-                  )}
-                >
-                  <Moon size={24} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Oscuro</span>
-                </Button>
-                <Button
-                  onClick={() => setTheme("light")}
-                  className={cn(
-                    "flex-1 h-24 flex flex-col items-center justify-center gap-3 rounded-2xl transition-all duration-300",
-                    theme === "light" 
-                      ? "bg-brand text-black shadow-[0_0_20px_rgba(184,115,51,0.2)]" 
-                      : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:bg-zinc-800"
-                  )}
-                >
-                  <Sun size={24} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Claro</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-1">
+            {[
+              { id: 'dark', label: 'Modo Oscuro', icon: Moon, desc: 'Interfaz optimizada para entornos industriales con poca luz' },
+              { id: 'light', label: 'Modo Claro', icon: Sun, desc: 'Alta legibilidad para entornos de oficina con luz natural' }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setTheme(item.id as any)}
+                className={cn(
+                  "w-full group flex items-center justify-between p-4 rounded-xl transition-all duration-200 border border-transparent",
+                  theme === item.id 
+                    ? "bg-brand/5 border-brand/20 shadow-inner" 
+                    : "hover:bg-muted/30"
+                )}
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                    theme === item.id ? "bg-brand text-black" : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+                  )}>
+                    <item.icon size={18} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className={cn("text-[11px] font-black uppercase tracking-widest", theme === item.id ? "text-brand" : "text-foreground")}>
+                      {item.label}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-tight opacity-60">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+                {theme === item.id && (
+                  <div className="w-5 h-5 rounded-full bg-brand flex items-center justify-center shadow-[0_0_10px_rgba(184,115,51,0.3)]">
+                    <Check size={12} className="text-black" strokeWidth={3} />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </section>
 
-        {/* COLORES DE MARCA */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Palette size={16} className="text-brand" />
-            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Identidad Visual</h2>
+        {/* NOTA DE TEMA AUTOMÁTICO */}
+        <section className="p-6 rounded-2xl bg-brand/5 border border-brand/10 border-dashed">
+          <div className="flex gap-4">
+             <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand shrink-0">
+               <ShieldCheck size={20} />
+             </div>
+             <div className="space-y-1">
+               <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Identidad Corporativa Protegida</h4>
+               <p className="text-[10px] text-muted-foreground uppercase leading-relaxed font-bold tracking-tight opacity-70">
+                 Los colores de la marca se configuran automáticamente según tu empresa registrada (CUREX o MORROCEL). No se requiere configuración manual.
+               </p>
+             </div>
           </div>
-
-          <Card className="bg-card border-border overflow-hidden shadow-soft">
-            <CardHeader className="bg-muted/30 border-b border-border p-4">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Color Secundario (Brand)</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-3">
-                {colors.map((c) => (
-                  <Button
-                    key={c.name}
-                    onClick={() => setBrandColor(c.hsl)}
-                    className={cn(
-                      "h-12 flex items-center justify-between px-4 rounded-xl transition-all duration-300 border border-zinc-900",
-                      brandColor === c.hsl ? "ring-2 ring-brand ring-offset-4 ring-offset-black" : ""
-                    )}
-                    style={{ backgroundColor: `hsl(${c.hsl})` }}
-                  >
-                    <span className="text-[9px] font-black uppercase text-black/80 drop-shadow-sm">{c.name}</span>
-                    {brandColor === c.hsl && <Check size={14} className="text-black" strokeWidth={3} />}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </section>
       </div>
 

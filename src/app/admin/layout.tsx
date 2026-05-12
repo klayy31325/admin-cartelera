@@ -10,17 +10,33 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [bgIndex, setBgIndex] = useState(0);
-  const backgrounds = ["/olimpia.png", "/novoflex.png"];
+  const backgrounds = ["/OLYMPIA.png", "/novoflex.png"];
+
+  const [themeClass, setThemeClass] = useState("");
 
   useEffect(() => {
+    const storedUser = localStorage.getItem("curex_user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.empresa?.toLowerCase().includes("morrocel")) {
+          setThemeClass("theme-morrocel");
+        } else if (user.empresa?.toLowerCase().includes("curex")) {
+          setThemeClass("theme-curex");
+        }
+      } catch (error) {
+        console.error("Error parsing user for theme:", error);
+      }
+    }
+
     const interval = setInterval(() => {
       setBgIndex((prev) => (prev + 1) % backgrounds.length);
-    }, 60000); // Cambia cada 60 segundos
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-background relative transition-colors duration-500">
+    <div className={`flex min-h-screen bg-background relative transition-colors duration-500 ${themeClass}`}>
       {/* Background Alternante Ultra Fluido - Ahora visible en ambos temas con diferentes filtros */}
       <div className="fixed inset-0 z-0 overflow-hidden bg-background">
         {backgrounds.map((bg, index) => (

@@ -1,0 +1,127 @@
+/* ─── Cartelera Industrial — Cyberpunk Aesthetic ─── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Ultra-Dark Cyber Palette (Default) */
+  --col-bg: #050508;
+  --col-surface: rgba(13, 13, 18, 0.7);
+  --col-surface-md: rgba(20, 20, 25, 0.95);
+  --col-border: rgba(255, 255, 255, 0.05);
+  --col-border-lg: rgba(255, 255, 255, 0.1);
+  --col-grid: rgba(249, 115, 22, 0.02);
+
+  --col-brand: #f97316;
+  --col-brand-dim: rgba(249, 115, 22, 0.1);
+  --col-brand-glow: rgba(249, 115, 22, 0.4);
+  
+  --col-success: #10b981;
+  --col-warn: #f59e0b;
+  --col-danger: #ef4444;
+  --col-info: #0ea5e9;
+
+  --col-text-primary: #e2e8f0;
+  --col-text-secondary: #94a3b8;
+  --col-text-muted: #475569;
+}
+
+/* Light Industrial Theme */
+.light-theme {
+  --col-bg: #f1f5f9;
+  --col-surface: rgba(255, 255, 255, 0.8);
+  --col-surface-md: #ffffff;
+  --col-border: rgba(0, 0, 0, 0.08);
+  --col-border-lg: rgba(0, 0, 0, 0.15);
+  --col-grid: rgba(0, 0, 0, 0.03);
+
+  --col-brand: #ea580c; /* Slightly deeper orange for contrast */
+  --col-brand-dim: rgba(234, 88, 12, 0.08);
+  --col-brand-glow: rgba(234, 88, 12, 0.2);
+
+  --col-text-primary: #0f172a;
+  --col-text-secondary: #475569;
+  --col-text-muted: #94a3b8;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--col-bg);
+  background-image: 
+    linear-gradient(var(--col-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--col-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--col-text-primary);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* CRT Scanline effect */
+body::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+  z-index: 9999;
+  background-size: 100% 4px;
+  pointer-events: none;
+  opacity: 0.1;
+}
+
+/* Technical Card */
+.glass {
+  background: var(--col-surface);
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass);
+  position: relative;
+  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--col-brand-glow), transparent);
+  opacity: 0.3;
+}
+
+.glass-md {
+  background: var(--col-surface-md);
+  border: 1px solid var(--col-border-lg);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.4s ease, border-color 0.4s ease;
+}
+
+.stat-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px var(--col-brand-dim);
+  transition: color 0.4s ease;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid transparent;
+}
+
+.badge-brand   { background: var(--col-brand-dim); color: var(--col-brand); border-color: var(--col-brand-glow); }
+.badge-success { background: rgba(16, 185, 129, 0.1); color: var(--col-success); border-color: rgba(16, 185, 129, 0.2); }
+.badge-warn    { background: rgba(245, 158, 11, 0.1); color: var(--col-warn);    border-color: rgba(245, 158, 11, 0.2); }
+.badge-danger  { background: rgba(239, 68, 68, 0.1);  color: var(--col-danger);  border-color: rgba(239, 68, 68, 0.2); }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

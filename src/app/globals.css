@@ -7,9 +7,6 @@
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     
-    --brand: 28 55% 46%;
-    --brand-light: 29 60% 50%;
-    --brand-dark: 25 75% 31%;
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -35,9 +32,9 @@
     --background: 240 4.8% 95.9%; /* zinc-50 */
     --foreground: 0 0% 0%;       /* Pure Black */
 
-    --brand: 24.6 95% 53.1%;
-    --brand-light: 24.6 95% 60%;
-    --brand-dark: 24.6 95% 45%;
+
+
+
 
     --card: 0 0% 100% / 1.0;     /* Solid White for high contrast */
     --card-foreground: 0 0% 0%;
@@ -62,9 +59,9 @@
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
 
-    --brand: 28 55% 46%;
-    --brand-light: 29 60% 50%;
-    --brand-dark: 25 75% 31%;
+
+
+
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -83,6 +80,19 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+  }
+  .theme-morrocel {
+    --brand: 22 52% 39%;
+    --brand-light: 22 52% 45%;
+    --brand-dark: 22 52% 30%;
+    --ring: 22 52% 39%;
+  }
+
+  .theme-curex {
+    --brand: 16 100% 50%;
+    --brand-light: 16 100% 60%;
+    --brand-dark: 16 100% 40%;
+    --ring: 16 100% 50%;
   }
 }
 

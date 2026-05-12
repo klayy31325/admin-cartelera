@@ -1,11 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+// ESTE ARCHIVO ESTÁ EN MIGRACIÓN
+// Se ha deshabilitado Prisma Client para evitar errores de compilación
+// mientras se migra el backend a Express (api-server).
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = {} as any;

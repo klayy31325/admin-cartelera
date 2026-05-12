@@ -1,0 +1,117 @@
+// ============================================================
+// repositories/tv.repository.js — Acceso a tabla normalizada 'tvs'
+// ============================================================
+const { pool } = require('../config/db');
+
+class TvRepository {
+  async findAll(empresa_id) {
+    const [rows] = await pool.execute(
+      `SELECT t.*, d.nombre as departamento, m.nombre as maquina_nombre 
+       FROM tvs t
+       JOIN departamentos d ON t.departamento_id = d.id
+       LEFT JOIN maquinas m ON t.maquina_id = m.id
+       WHERE t.empresa_id = ? 
+       ORDER BY t.id DESC`,
+      [empresa_id]
+    );
+    return rows;
+  }
+
+  async findById(id, empresa_id) {
+    const [rows] = await pool.execute(
+      `SELECT t.*, d.nombre as departamento, m.nombre as maquina_nombre 
+       FROM tvs t
+       JOIN departamentos d ON t.departamento_id = d.id
+       LEFT JOIN maquinas m ON t.maquina_id = m.id
+       WHERE t.id = ? AND t.empresa_id = ?`,
+      [id, empresa_id]
+    );
+    return rows[0] || null;
+  }
+
+  async findByIp(ipAddress, empresa_id) {
+    const [rows] = await pool.execute(
+      `SELECT t.*, d.nombre as departamento 
+       FROM tvs t
+       JOIN departamentos d ON t.departamento_id = d.id
+       WHERE t.ip_address = ? AND t.empresa_id = ?`,
+      [ipAddress, empresa_id]
+    );
+    return rows[0] || null;
+  }
+
+  async create(data) {
+    const { empresa_id, departamento_id, informacion, ip_address, estado_conexion } = data;
+    const uid = data.uid || `TV-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    const [result] = await pool.execute(
+      `INSERT INTO tvs (uid, empresa_id, departamento_id, informacion, ip_address, estado_conexion)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [uid, empresa_id, departamento_id, informacion, ip_address, estado_conexion]
+    );
+    return { id: result.insertId, ...data, uid };
+  }
+
+  async update(id, data) {
+    const { departamento_id, informacion, ip_address, estado_conexion, maquina_id, empresa_id } = data;
+    const [result] = await pool.execute(
+      `UPDATE tvs 
+       SET departamento_id = ?, informacion = ?, ip_address = ?, estado_conexion = ?, maquina_id = ?
+       WHERE id = ? AND empresa_id = ?`,
+      [departamento_id, informacion, ip_address, estado_conexion, maquina_id || null, id, empresa_id]
+    );
+    return { affectedRows: result.affectedRows };
+  }
+
+  async delete(id, empresa_id) {
+    const [result] = await pool.execute(
+      'DELETE FROM tvs WHERE id = ? AND empresa_id = ?',
+      [id, empresa_id]
+    );
+    return { affectedRows: result.affectedRows };
+  }
+  async registerConnection(uid, data) {
+    const { ip_address, estado_conexion, departamento_id, informacion, empresa_id = 2 } = data;
+    
+    // 1. Intentar buscar por UID (incluyendo información de la máquina asignada)
+    const [rows] = await pool.execute(`
+      SELECT t.id, t.maquina_id, m.nombre as maquina_nombre 
+      FROM tvs t
+      LEFT JOIN maquinas m ON t.maquina_id = m.id
+      WHERE t.uid = ?
+    `, [uid]);
+    
+    if (rows.length > 0) {
+      // 2. Si existe, actualizar estado e IP
+      await pool.execute(
+        'UPDATE tvs SET ip_address = ?, estado_conexion = ?, last_sync = CURRENT_TIMESTAMP WHERE uid = ?',
+        [ip_address, estado_conexion, uid]
+      );
+      return { 
+        id: rows[0].id, 
+        uid, 
+        status: 'updated', 
+        config: { 
+          maquina_id: rows[0].maquina_id, 
+          maquina_nombre: rows[0].maquina_nombre 
+        } 
+      };
+    } else {
+      // 3. Si no existe, crear registro nuevo
+      const [result] = await pool.execute(
+        `INSERT INTO tvs (uid, empresa_id, departamento_id, informacion, ip_address, estado_conexion)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [uid, empresa_id, departamento_id || 1, informacion || 'TV AUTO-REGISTRADA', ip_address, estado_conexion]
+      );
+      return { id: result.insertId, uid, status: 'created', config: { maquina_id: null, maquina_nombre: null } };
+    }
+  }
+
+  async updateStatusByUid(uid, status) {
+    await pool.execute(
+      'UPDATE tvs SET estado_conexion = ? WHERE uid = ?',
+      [status, uid]
+    );
+  }
+}
+
+module.exports = new TvRepository();

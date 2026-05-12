@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Lock, User, ShieldCheck, Terminal as TerminalIcon, Loader2 } from "lucide-react";
+import { Lock, User, Terminal as TerminalIcon, Loader2, Mail, Building, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -12,22 +12,86 @@ export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
-  const backgrounds = ["/olimpia.png", "/novoflex.png"];
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const [formData, setFormData] = useState({
+    nombre: "",
+    apellido: "",
+    correo: "",
+    password: "",
+    empresa: "",
+    departamento: "",
+  });
+
+  const backgrounds = ["/OLYMPIA.png", "/novoflex.png"];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setBgIndex((prev) => (prev + 1) % backgrounds.length);
-    }, 40000); // Cambia cada 40 segundos
+    }, 40000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrorMsg("");
+    setSuccessMsg("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulación de autorización técnica
-    setTimeout(() => {
-      router.push("/admin/production");
-    }, 1500);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      if (isLoginView) {
+        // Lógica de Login
+        const res = await fetch("http://localhost:8000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            correo: formData.correo,
+            password: formData.password,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error?.message || "Credenciales incorrectas");
+        }
+
+        // Guardar token y redirigir
+        localStorage.setItem("curex_token", data.data.token);
+        localStorage.setItem("curex_user", JSON.stringify(data.data.usuario));
+        router.push("/admin/production");
+
+      } else {
+        // Lógica de Registro
+        const res = await fetch("http://localhost:8000/api/usuarios", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error?.message || "Error al registrar usuario");
+        }
+
+        setSuccessMsg("Usuario registrado con éxito. Ahora inicia sesión.");
+        setIsLoginView(true);
+        setFormData({ ...formData, password: "" }); // limpiar contraseña
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -57,7 +121,6 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md animate-in fade-in zoom-in duration-500">
         {/* Header de CARTELERA DIGITAL */}
         <div className="flex flex-col items-center mb-8 text-center">
-
           <h1 className="text-4xl font-black tracking-tighter text-white mb-1 uppercase">
             CARTELERA <span className="text-brand"> DIGITAL</span>
           </h1>
@@ -70,16 +133,102 @@ export default function LoginPage() {
           {/* Línea de escaneo decorativa */}
           <div className="absolute top-0 left-0 w-full h-[2px] bg-brand/20 shadow-[0_0_15px_rgba(184,115,51,0.5)]" />
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+
+            {errorMsg && (
+              <div className="bg-red-500/10 border border-red-500/50 p-3 rounded-lg text-[11px] text-red-200 text-center font-bold">
+                {errorMsg}
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="bg-green-500/10 border border-green-500/50 p-3 rounded-lg text-[11px] text-green-200 text-center font-bold">
+                {successMsg}
+              </div>
+            )}
+
             <div className="space-y-4">
+              {!isLoginView && (
+                <div className="flex gap-4">
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">NOMBRE</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 text-zinc-600" size={18} />
+                      <Input
+                        name="nombre"
+                        value={formData.nombre}
+                        onChange={handleChange}
+                        required={!isLoginView}
+                        placeholder="John"
+                        className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">APELLIDO</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 text-zinc-600" size={18} />
+                      <Input
+                        name="apellido"
+                        value={formData.apellido}
+                        onChange={handleChange}
+                        required={!isLoginView}
+                        placeholder="Doe"
+                        className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isLoginView && (
+                <div className="flex gap-4">
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">EMPRESA</label>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-3 text-zinc-600" size={18} />
+                      <select
+                        name="empresa"
+                        value={formData.empresa}
+                        onChange={handleChange}
+                        required={!isLoginView}
+                        className="flex h-12 w-full rounded-md border border-white/10 bg-white/10 pl-10 pr-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:border-brand/50 focus:bg-white/15 transition-all disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                      >
+                        <option value="" disabled className="bg-zinc-900">Seleccionar Empresa</option>
+                        <option value="MORROCEL C.A" className="bg-zinc-900 text-white">MORROCEL C.A</option>
+                        <option value="CUREX C.A" className="bg-zinc-900 text-white">CUREX C.A</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">DEPARTAMENTO</label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-3 text-zinc-600" size={18} />
+                      <Input
+                        name="departamento"
+                        value={formData.departamento}
+                        onChange={handleChange}
+                        required={!isLoginView}
+                        placeholder="Producción"
+                        className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">USER</label>
+                <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">CORREO EMAIL</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 text-zinc-600" size={18} />
+                  <Mail className="absolute left-3 top-3 text-zinc-600" size={18} />
                   <Input
-                    placeholder="ADMIN_USER"
+                    type="email"
+                    name="correo"
+                    value={formData.correo}
+                    onChange={handleChange}
+                    required
+                    placeholder="admin@curex.com"
                     className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
-                    defaultValue="admin"
                   />
                 </div>
               </div>
@@ -90,9 +239,12 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-3 text-zinc-600" size={18} />
                   <Input
                     type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
                     placeholder="••••••••"
                     className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
-                    defaultValue="password"
                   />
                 </div>
               </div>
@@ -101,25 +253,38 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-brand hover:bg-brand-dark text-black font-black text-sm uppercase tracking-widest h-14 rounded-xl shadow-[0_0_20px_rgba(184,115,51,0.2)] hover:shadow-[0_0_30px_rgba(184,115,51,0.4)] transition-all flex items-center justify-center gap-2"
+              className="w-full bg-zinc-600 hover:bg-zinc-700 text-white font-black text-sm uppercase tracking-widest h-14 rounded-xl shadow-[0_0_20px_rgba(82,82,91,0.2)] hover:shadow-[0_0_30px_rgba(82,82,91,0.4)] transition-all flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
-
+                  {isLoginView ? "INICIAR SESIÓN" : "REGISTRAR ACCESO"}
                   <TerminalIcon size={18} />
                 </>
               )}
             </Button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-zinc-900 flex justify-between items-center text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">
-            <span className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-              AYUDA
-            </span>
-            <span>SOPORTE</span>
+          <div className="mt-8 pt-6 border-t border-zinc-900/50 flex flex-col justify-center items-center text-[9px] text-zinc-400 font-bold uppercase tracking-tighter gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLoginView(!isLoginView);
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+              className="hover:text-brand transition-colors border-b border-transparent hover:border-brand pb-0.5"
+            >
+              {isLoginView ? "¿No tienes cuenta? Solicita acceso al sistema" : "¿Ya tienes credenciales? Inicia sesión"}
+            </button>
+            <div className="flex gap-4 opacity-50 mt-2">
+              <span className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                AYUDA
+              </span>
+              <span>SOPORTE</span>
+            </div>
           </div>
         </Card>
 

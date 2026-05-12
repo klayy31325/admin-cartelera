@@ -18,24 +18,18 @@ const BRAND_COLORS: BrandColor[] = [
 
 interface ThemeContextType {
   theme: Theme;
-  brandColor: string;
   setTheme: (theme: Theme) => void;
-  setBrandColor: (hsl: string) => void;
-  colors: BrandColor[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
-  const [brandColor, setBrandColor] = useState("28 55% 46%");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as Theme;
-    const savedColor = localStorage.getItem("brandColor");
     if (savedTheme) setTheme(savedTheme);
-    if (savedColor) setBrandColor(savedColor);
     setMounted(true);
   }, []);
 
@@ -47,24 +41,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("theme", theme);
   }, [theme, mounted]);
 
-  useEffect(() => {
-    if (!mounted) return;
-    const root = window.document.documentElement;
-    root.style.setProperty("--brand", brandColor);
-    
-    const [h, s, l] = brandColor.split(" ").map(v => parseInt(v));
-    root.style.setProperty("--brand-light", `${h} ${s}% ${l + 10}%`);
-    root.style.setProperty("--brand-dark", `${h} ${s}% ${l - 10}%`);
-    
-    localStorage.setItem("brandColor", brandColor);
-  }, [brandColor, mounted]);
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
-    <ThemeContext.Provider value={{ theme, brandColor, setTheme, setBrandColor, colors: BRAND_COLORS }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

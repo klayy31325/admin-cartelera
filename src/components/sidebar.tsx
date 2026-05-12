@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,55 +11,82 @@ import {
   LogOut,
   Activity,
   ShieldCheck,
-  User as UserIcon
+  Megaphone,
+  User as UserIcon,
+  Clock,
+  Terminal,
+  Cpu,
+  PieChart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
-    group: "Administration", items: [
-      { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { name: "Production", href: "/admin/production", icon: ClipboardList },
-      { name: "Monitoring", href: "/admin/monitoring", icon: Activity },
-      { name: "System Logs", href: "/admin/logs", icon: Database },
+    group: "OPERACIONES", items: [
+      { name: "Panel de Control", href: "/admin", icon: LayoutDashboard },
+      { name: "Vista General", href: "/admin/general", icon: PieChart },
+      { name: "Producción", href: "/admin/production", icon: ClipboardList },
+      { name: "Monitoreo", href: "/admin/monitoring", icon: Activity },
+      { name: "Información Diaria", href: "/admin/informations", icon: Megaphone },
     ]
   },
   {
-    group: "Config", items: [
-      { name: "Settings", href: "/admin/settings", icon: Settings },
+    group: "CONFIGURACIÓN", items: [
+      { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings },
     ]
   }
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [user, setUser] = useState<{ nombre: string; apellido: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("curex_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Error parsing user from localStorage:", error);
+      }
+    }
+  }, []);
 
   return (
-    <aside className="w-72 bg-zinc-500/10 backdrop-blur-xl border-r border-border flex flex-col h-screen sticky top-0 shadow-soft transition-colors duration-500">
-      {/* Logo Area */}
-      <div className="p-8">
-        <Link href="/admin/production" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-black shadow-[0_0_15px_rgba(184,115,51,0.3)] group-hover:scale-110 transition-transform">
-            <ShieldCheck size={24} strokeWidth={2.5} />
+    <aside className="w-72 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-white/[0.03] flex flex-col h-screen sticky top-0 z-50 overflow-hidden">
+      {/* Glow Decorativo (Solo en Oscuro) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-transparent pointer-events-none opacity-0 dark:opacity-100" />
+
+      {/* Area del Logo */}
+      <div className="p-8 relative">
+        <Link href="/admin/production" className="flex items-center gap-4 group">
+          <div className="relative">
+            <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(184,115,51,0.25)] dark:shadow-[0_0_25px_rgba(184,115,51,0.4)] group-hover:scale-105 transition-all duration-500">
+              <ShieldCheck size={26} strokeWidth={2.5} />
+            </div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-zinc-950 rounded-full" />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-tighter text-foreground group-hover:text-brand transition-colors leading-none uppercase">
-              ADMIN  <span className="text-brand">  CARTELERA</span>
+            <h1 className="text-xl font-black tracking-tighter text-zinc-900 dark:text-white group-hover:text-brand transition-colors leading-none">
+              CUREX <span className="text-brand">ADMIN</span>
             </h1>
-            <p className="text-[8px] uppercase tracking-widest text-muted-foreground font-bold mt-1">SISTEMA DE PRODUCCION</p>
+            <p className="text-[7px] uppercase font-black tracking-[0.4em] text-zinc-400 dark:text-zinc-500 mt-1.5 flex items-center gap-1.5">
+              <Cpu size={8} /> SISTEMA CENTRAL v4.2
+            </p>
           </div>
         </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-8 overflow-y-auto">
+      {/* Navegación - Scrollbar oculto */}
+      <nav className="flex-1 px-4 py-2 space-y-10 overflow-y-auto overflow-x-hidden transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden relative">
         {menuItems.map((group) => (
-          <div key={group.group} className="space-y-2">
-            <h2 className="px-4 text-[10px] uppercase font-black text-zinc-700 tracking-[0.2em]">
+          <div key={group.group} className="space-y-4">
+            <h2 className="px-4 text-[9px] font-black text-zinc-400 dark:text-zinc-600 tracking-[0.3em] flex items-center gap-2">
+              <div className="h-[1px] w-4 bg-zinc-100 dark:bg-zinc-800" />
               {group.group}
             </h2>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -67,17 +95,21 @@ export function Sidebar() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group relative overflow-hidden",
+                      "flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative overflow-hidden",
                       isActive
-                        ? "bg-brand/10 text-brand shadow-[inset_0_0_10px_rgba(184,115,51,0.05)]"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(184,115,51,0.03)]"
+                        : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/[0.02]"
                     )}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-0 w-1 h-full bg-brand" />
+                      <div className="absolute left-0 top-1/4 h-1/2 w-[3px] bg-brand rounded-r-full shadow-[0_0_10px_rgba(184,115,51,1)]" />
                     )}
-                    <Icon size={18} className={cn(isActive ? "text-brand" : "group-hover:text-brand transition-colors")} />
-                    {item.name}
+
+                    <Icon size={18} className={cn(
+                      "transition-all duration-300",
+                      isActive ? "text-brand scale-110 drop-shadow-[0_0_8px_rgba(184,115,51,0.3)]" : "group-hover:text-zinc-900 dark:group-hover:text-white"
+                    )} />
+                    <span className="relative z-10">{item.name}</span>
                   </Link>
                 );
               })}
@@ -86,31 +118,79 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* User Area */}
-      <div className="p-4 border-t border-zinc-900 space-y-4">
-        <div className="flex items-center gap-3 px-4 py-2">
-          <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
-            <UserIcon size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-black text-foreground uppercase tracking-tighter">Admin User</p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Online</span>
+      {/* Footer de Usuario */}
+      <div className="p-5 border-t border-zinc-200 dark:border-white/[0.03] bg-white dark:bg-zinc-950">
+        <div className="flex items-center justify-between gap-3 mb-2 px-1">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-white/[0.05] flex items-center justify-center text-brand overflow-hidden shadow-sm">
+              {user ? <span className="font-black text-xs">{user.nombre[0]}{user.apellido[0]}</span> : <UserIcon size={16} />}
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-tighter leading-none">
+                {user ? `${user.nombre} ${user.apellido}` : "Operador_01"}
+              </p>
+              <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] mt-1 block">Acceso Nivel 1</span>
             </div>
           </div>
+          <Link href="/">
+            <button className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
+              <LogOut size={16} />
+            </button>
+          </Link>
         </div>
-
-        <Link href="/">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 h-12 rounded-xl font-bold text-xs uppercase tracking-widest"
-          >
-            <LogOut size={16} />
-            Terminal Logout
-          </Button>
-        </Link>
       </div>
     </aside>
+  );
+}
+
+function RecentLogs() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/logs?limit=4");
+      const data = await res.json();
+      if (Array.isArray(data)) setLogs(data);
+    } catch (err) {
+      console.error("Error fetching logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) return <div className="space-y-3 px-1">{[1, 2, 3].map(i => <div key={i} className="h-10 animate-pulse bg-zinc-100 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-white/[0.02]" />)}</div>;
+  if (logs.length === 0) return <p className="text-[9px] text-zinc-400 italic px-2 font-mono">Buscando actividad...</p>;
+
+  return (
+    <div className="space-y-3.5 px-1">
+      {logs.map((log) => (
+        <div key={log.id} className="group relative pl-4 border-l-2 border-zinc-100 dark:border-zinc-900 hover:border-brand/40 transition-all duration-300">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={cn(
+              "text-[7px] font-black uppercase px-1.5 py-0.5 rounded-sm tracking-widest",
+              log.tipo === 'success' ? "bg-green-500/10 text-green-600 dark:text-green-500" :
+                log.tipo === 'warning' ? "bg-amber-500/10 text-amber-600 dark:text-amber-500" :
+                  log.tipo === 'error' ? "bg-red-500/10 text-red-600 dark:text-red-500" : "bg-brand/10 text-brand"
+            )}>
+              {log.accion}
+            </span>
+            <span className="text-[8px] font-mono text-zinc-400 dark:text-zinc-700 flex items-center gap-1.5">
+              <Clock className="w-2.5 h-2.5" />
+              {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          </div>
+          <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-300 transition-colors leading-relaxed line-clamp-2">
+            {log.descripcion}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
