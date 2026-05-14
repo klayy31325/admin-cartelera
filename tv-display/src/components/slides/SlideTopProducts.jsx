@@ -43,7 +43,7 @@ export default function SlideTopProducts({ data, isLoading }) {
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'white', letterSpacing: '0.02em' }}>{item.maquina_nombre}</h3>
                     <p style={{ fontSize: '10px', color: 'var(--col-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                      EFICIENCIA: {Math.round(item.eficiencia_promedio)}% | PARADAS: {item.minutos_parada} MIN
+                      EFICIENCIA: {Math.round(Number(item.eficiencia_promedio))}% | PARADAS: {Math.round(Number(item.total_minutos))} MIN
                     </p>
                   </div>
                 </div>

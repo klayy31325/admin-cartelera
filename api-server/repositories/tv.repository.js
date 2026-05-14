@@ -72,19 +72,36 @@ class TvRepository {
   async registerConnection(uid, data) {
     const { ip_address, estado_conexion, departamento_id, informacion, empresa_id = 2 } = data;
     
-    // 1. Intentar buscar por UID (incluyendo información de la máquina asignada)
-    const [rows] = await pool.execute(`
+    // 1. Intentar buscar por UID
+    let [rows] = await pool.execute(`
       SELECT t.id, t.maquina_id, m.nombre as maquina_nombre 
       FROM tvs t
       LEFT JOIN maquinas m ON t.maquina_id = m.id
       WHERE t.uid = ?
     `, [uid]);
     
+    // 2. Si no hay por UID, intentar por IP (para vincular registros creados manualmente en Admin)
+    if (rows.length === 0 && ip_address) {
+      const [ipRows] = await pool.execute(`
+        SELECT t.id, t.maquina_id, m.nombre as maquina_nombre 
+        FROM tvs t
+        LEFT JOIN maquinas m ON t.maquina_id = m.id
+        WHERE t.ip_address = ? AND (t.uid IS NULL OR t.uid = '' OR t.uid = 'null')
+        LIMIT 1
+      `, [ip_address]);
+      
+      if (ipRows.length > 0) {
+        console.log(`[TV] Vinculando nuevo UID ${uid} a TV existente por IP: ${ip_address}`);
+        await pool.execute('UPDATE tvs SET uid = ? WHERE id = ?', [uid, ipRows[0].id]);
+        rows = ipRows;
+      }
+    }
+
     if (rows.length > 0) {
-      // 2. Si existe, actualizar estado e IP
+      // 3. Si existe, actualizar estado e IP
       await pool.execute(
-        'UPDATE tvs SET ip_address = ?, estado_conexion = ?, last_sync = CURRENT_TIMESTAMP WHERE uid = ?',
-        [ip_address, estado_conexion, uid]
+        'UPDATE tvs SET ip_address = ?, estado_conexion = ? WHERE uid = ?',
+        [ip_address || null, estado_conexion || 'offline', uid]
       );
       return { 
         id: rows[0].id, 
@@ -96,11 +113,11 @@ class TvRepository {
         } 
       };
     } else {
-      // 3. Si no existe, crear registro nuevo
+      // 4. Si no existe nada, crear registro nuevo
       const [result] = await pool.execute(
         `INSERT INTO tvs (uid, empresa_id, departamento_id, informacion, ip_address, estado_conexion)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [uid, empresa_id, departamento_id || 1, informacion || 'TV AUTO-REGISTRADA', ip_address, estado_conexion]
+        [uid, empresa_id, departamento_id || 1, informacion || 'TV AUTO-REGISTRADA', ip_address || null, estado_conexion || 'offline']
       );
       return { id: result.insertId, uid, status: 'created', config: { maquina_id: null, maquina_nombre: null } };
     }

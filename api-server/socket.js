@@ -24,7 +24,14 @@ function initSocket(httpServer) {
     // Registro automático de TV
     socket.on('tv:identify', async (data) => {
       try {
-        const { uid, ip, departamento_id, informacion } = data;
+        const { uid, departamento_id, informacion } = data;
+        let ip = data.ip || socket.handshake.address;
+        
+        // Limpiar IP si viene con formato IPv6 ::ffff:
+        if (ip && ip.includes('::ffff:')) {
+          ip = ip.split('::ffff:')[1];
+        }
+
         if (!uid) return;
 
         socket.tv_uid = uid; // Vincular UID al socket

@@ -23,24 +23,33 @@ function StatCard({ label, value, unit, color = 'primary' }) {
   );
 }
 
-export default function SlideMachineFocus({ data, velocity, maquina, isMonthly }) {
+export default function SlideMachineFocus({ data, velocity, maquina, maquina_id, isMonthly }) {
   const produccion = data?.produccion ?? [];
   const paradas    = data?.paradas    ?? [];
+  const desperdicio = data?.desperdicio ?? { total_kg: 0 };
 
-  // Buscar la data específica de esta máquina en los resultados del resumen
-  const machineData = produccion.find(p => p.maquina_nombre?.toUpperCase() === maquina?.toUpperCase());
-  
-  if (!machineData) {
-    console.warn(`[SlideMachineFocus] No data found for machine: "${maquina}". Available:`, produccion.map(p => p.maquina_nombre));
-  }
-  const machineStops = paradas.slice(0, 5); // Ya vienen filtradas por maquina_id desde la API
+  // Buscar la data específica de esta máquina si se nos pasó un ID (caso de rotación genérica)
+  const machineData = maquina_id 
+    ? produccion.find(p => Number(p.maquina_id) === Number(maquina_id))
+    : produccion[0] || null;
 
-  // Usar los datos de velocidad reales si existen, sino usar placeholder vacío
+  // Filtrar paradas específicas de esta máquina
+  const machineStops = maquina_id
+    ? paradas.filter(p => Number(p.maquina_id) === Number(maquina_id)).slice(0, 5)
+    : paradas.slice(0, 5);
+
+  // Filtrar trabajos específicos de esta máquina
+  const machineJobs = maquina_id
+    ? (data?.trabajos?.filter(t => Number(t.maquina_id) === Number(maquina_id)) ?? []).slice(0, 4)
+    : (data?.trabajos ?? []).slice(0, 4);
+
+  // Usar los datos de velocidad reales si existen
   const velocityData = velocity && velocity.length > 0 ? velocity : [
     { hora: '00:00', real: 0, target: 100 },
   ];
 
-  const efic = machineData?.eficiencia_promedio ?? 0;
+  const efic = Number(machineData?.eficiencia_promedio ?? 0);
+  const totalMinutos = Number(machineData?.total_minutos ?? 0);
   const eficColor = efic >= 80 ? 'success' : efic >= 60 ? 'warn' : 'danger';
 
   return (
@@ -56,8 +65,9 @@ export default function SlideMachineFocus({ data, velocity, maquina, isMonthly }
           </div>
         </div>
         <StatCard label={isMonthly ? "METROS MENSUALES" : "METROS PRODUCIDOS"} value={Number(machineData?.total_metros ?? 0).toLocaleString()} unit="m" color="brand" />
-        <StatCard label={isMonthly ? "EFICIENCIA MENSUAL" : "EFICIENCIA ACTUAL"} value={Math.round(efic)} unit="%" color={eficColor} />
-        <StatCard label={isMonthly ? "PARADA MENSUAL" : "TIEMPO DETENIDA"} value={Math.round(machineData?.total_minutos ?? 0)} unit="min" color="warn" />
+        <StatCard label={isMonthly ? "EFICIENCIA" : "EFICIENCIA ACTUAL"} value={Math.round(efic)} unit="%" color={eficColor} />
+        <StatCard label="TIEMPO PARADA" value={Math.round(totalMinutos)} unit="min" color="warn" />
+        <StatCard label="DESPERDICIO" value={Number(desperdicio.total_kg).toFixed(1)} unit="kg" color="danger" />
       </div>
 
       {/* Main Content */}
@@ -96,30 +106,58 @@ export default function SlideMachineFocus({ data, velocity, maquina, isMonthly }
           </div>
         </section>
 
-        {/* Logs / Incidents */}
-        <section className="glass" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <AlertTriangle size={16} color="var(--col-warn)" />
-            <h2 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--col-text-primary)', letterSpacing: '0.05em' }}>
-              INCIDENCIAS DETECTADAS
-            </h2>
-          </header>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {machineStops.length > 0 ? machineStops.map((stop, i) => (
-              <div key={i} style={{ borderLeft: '2px solid var(--col-warn)', paddingLeft: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'white' }}>{stop.motivo_nombre}</span>
-                  <span style={{ fontSize: '10px', color: 'var(--col-warn)', fontFamily: 'var(--font-mono)' }}>{stop.total_minutos} MIN</span>
+        {/* Logs / Incidents & Jobs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          
+          <section className="glass" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <AlertTriangle size={16} color="var(--col-warn)" />
+              <h2 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--col-text-primary)', letterSpacing: '0.05em' }}>
+                INCIDENCIAS DETECTADAS
+              </h2>
+            </header>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {machineStops.length > 0 ? machineStops.map((stop, i) => (
+                <div key={i} style={{ borderLeft: '2px solid var(--col-warn)', paddingLeft: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'white' }}>{stop.motivo_nombre}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--col-warn)', fontFamily: 'var(--font-mono)' }}>{stop.total_minutos} MIN</span>
+                  </div>
+                  <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                    <div style={{ width: `${Math.min((stop.total_minutos/60)*100, 100)}%`, height: '100%', background: 'var(--col-warn)' }} />
+                  </div>
                 </div>
-                <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-                  <div style={{ width: `${Math.min((stop.total_minutos/60)*100, 100)}%`, height: '100%', background: 'var(--col-warn)' }} />
+              )) : (
+                <p style={{ color: 'var(--col-text-muted)', fontSize: '10px', textAlign: 'center', marginTop: 10 }}>SISTEMA NOMINAL</p>
+              )}
+            </div>
+          </section>
+
+          <section className="glass" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <Zap size={16} color="var(--col-brand)" />
+              <h2 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--col-text-primary)', letterSpacing: '0.05em' }}>
+                TRABAJOS RECIENTES
+              </h2>
+            </header>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {machineJobs.length > 0 ? machineJobs.map((t, i) => (
+                <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                      {t.producto_nombre}
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--col-brand)', fontWeight: 700 }}>{Number(t.metros_producidos).toLocaleString()} m</span>
+                  </div>
+                  <p style={{ fontSize: '8px', color: 'var(--col-text-muted)', marginTop: 4 }}>{t.cliente_nombre}</p>
                 </div>
-              </div>
-            )) : (
-              <p style={{ color: 'var(--col-text-muted)', fontSize: '12px', textAlign: 'center', marginTop: 40 }}>SISTEMA NOMINAL - SIN PARADAS</p>
-            )}
-          </div>
-        </section>
+              )) : (
+                <p style={{ color: 'var(--col-text-muted)', fontSize: '10px', textAlign: 'center' }}>SIN TRABAJOS HOY</p>
+              )}
+            </div>
+          </section>
+
+        </div>
 
       </div>
     </div>

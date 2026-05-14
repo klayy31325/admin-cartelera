@@ -55,6 +55,7 @@ class ParadasRepository {
     const dateToQuery = fecha || new Date().toISOString().split('T')[0];
     let sql = `
       SELECT 
+        t.maquina_id,
         pt.motivo_id,
         mp.nombre as motivo_nombre,
         mp.tipo as tipo,
@@ -69,7 +70,7 @@ class ParadasRepository {
       sql += ' AND t.maquina_id = ?';
       params.push(maquina_id);
     }
-    sql += ' GROUP BY pt.motivo_id, mp.nombre, mp.tipo ORDER BY total_minutos DESC';
+    sql += ' GROUP BY t.maquina_id, pt.motivo_id, mp.nombre, mp.tipo ORDER BY total_minutos DESC';
     const [rows] = await pool.execute(sql, params);
     return rows;
   }
@@ -81,6 +82,7 @@ class ParadasRepository {
     const monthToQuery = mes || new Date().toISOString().slice(0, 7); // YYYY-MM
     let sql = `
       SELECT 
+        t.maquina_id,
         pt.motivo_id,
         mp.nombre as motivo_nombre,
         mp.tipo as tipo,
@@ -95,7 +97,7 @@ class ParadasRepository {
       sql += ' AND t.maquina_id = ?';
       params.push(maquina_id);
     }
-    sql += ' GROUP BY pt.motivo_id, mp.nombre, mp.tipo ORDER BY total_minutos DESC';
+    sql += ' GROUP BY t.maquina_id, pt.motivo_id, mp.nombre, mp.tipo ORDER BY total_minutos DESC';
     const [rows] = await pool.execute(sql, params);
     return rows;
   }

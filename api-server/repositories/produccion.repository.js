@@ -125,7 +125,7 @@ class ProduccionRepository {
           FROM paradas_trabajo pt
           JOIN trabajos tr ON pt.trabajo_id = tr.id
           WHERE tr.maquina_id = m.id AND tr.fecha = ?
-        ), 0) as minutos_parada
+        ), 0) as total_minutos
       FROM maquinas m
       LEFT JOIN trabajos t ON m.id = t.maquina_id AND t.fecha = ?
       WHERE 1=1
@@ -165,6 +165,33 @@ class ProduccionRepository {
       params.push(maquina_id);
     }
     sql += ' GROUP BY m.id, m.nombre';
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+  }
+
+  /**
+   * Obtiene la lista de trabajos individuales para una fecha
+   */
+  async getRecentTrabajos(fecha, maquina_id = null) {
+    const dateToQuery = fecha || new Date().toISOString().split('T')[0];
+    let sql = `
+      SELECT 
+        t.id, t.metros_producidos, t.created_at,
+        m.nombre as maquina_nombre,
+        p.nombre as producto_nombre,
+        c.nombre as cliente_nombre
+      FROM trabajos t
+      JOIN maquinas m ON t.maquina_id = m.id
+      JOIN productos p ON t.producto_id = p.id
+      JOIN clientes c ON p.cliente_id = c.id
+      WHERE t.fecha = ?
+    `;
+    const params = [dateToQuery];
+    if (maquina_id) {
+      sql += ' AND t.maquina_id = ?';
+      params.push(maquina_id);
+    }
+    sql += ' ORDER BY t.created_at DESC LIMIT 10';
     const [rows] = await pool.execute(sql, params);
     return rows;
   }

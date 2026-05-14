@@ -1,3 +1,4 @@
+import React from 'react';
 import ConnectionBadge from './ConnectionBadge';
 import { Factory, Sun, Moon } from 'lucide-react';
 
@@ -117,6 +118,3 @@ function LiveClock() {
 function now() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-
-// Need React in scope for LiveClock
-import React from 'react';

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
@@ -7,57 +7,45 @@ import SlideGeneralDashboard from './slides/SlideGeneralDashboard';
 import SlideMachineFocus from './slides/SlideMachineFocus';
 import SlideTopProducts from './slides/SlideTopProducts';
 import SlideInfo from './slides/SlideInfo';
+import SlideVelocity from './slides/SlideVelocity';
+import SlideWaste from './slides/SlideWaste';
 import TopBar from './TopBar';
 import Login from './Login';
 
-const SLIDE_DURATION = 20_000; // 20 segundos
+const SLIDE_DURATION = 50_000; // 50 segundos
 
 const SLIDES = [
-  { id: 'general',   label: 'Vista General',  Component: SlideGeneralDashboard },
-  { id: 'focus',     label: 'Enfoque Máquina', Component: SlideMachineFocus },
-  { id: 'info',      label: 'Información',    Component: SlideInfo },
-  { id: 'productos', label: 'Top Productos',  Component: SlideTopProducts },
+  { id: 'general', label: 'Vista General', Component: SlideGeneralDashboard },
+  { id: 'focus', label: 'Enfoque Máquina', Component: SlideMachineFocus },
+  { id: 'info', label: 'Información', Component: SlideInfo },
+  { id: 'productos', label: 'Top Productos', Component: SlideTopProducts },
 ];
 
 /* Framer-motion variants — horizontal slide with spatial continuity */
 const variants = {
   enter: (dir) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
   center: { x: 0, opacity: 1 },
-  exit:  (dir) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
+  exit: (dir) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
 };
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 async function fetchDashboard(maquina_id = null) {
-  const today = new Date().toISOString().split('T')[0];
-  const month = today.slice(0, 7); // YYYY-MM
-  const token = localStorage.getItem('curex_token') || '';
-  const headers = { Authorization: `Bearer ${token}` };
+  const baseUrl = `${API}/api/public`;
+  const mIdQuery = maquina_id ? `?maquina_id=${maquina_id}` : '';
 
-  // Construir URLs dinámicamente según si hay una máquina enfocada
-  const baseUrl = `${API}/api`;
-  const mIdQuery = maquina_id ? `&maquina_id=${maquina_id}` : '';
+  const res = await fetch(`${baseUrl}/dashboard${mIdQuery}`);
+  const json = await res.json();
 
-  const [mParadas, mProduccion, dProduccion, info, velocity] = await Promise.all([
-    fetch(`${baseUrl}/paradas/summary-month?mes=${month}${mIdQuery}`, { headers }).then(r => r.json()),
-    fetch(`${baseUrl}/produccion/summary-month?mes=${month}${mIdQuery}`, { headers }).then(r => r.json()),
-    fetch(`${baseUrl}/produccion/summary-today?fecha=${today}${mIdQuery}`, { headers }).then(r => r.json()),
-    fetch(`${baseUrl}/informacion`, { headers }).then(r => r.json()),
-    maquina_id 
-      ? fetch(`${baseUrl}/velocidad/series?maquina_id=${maquina_id}`, { headers }).then(r => r.json())
-      : Promise.resolve({ success: true, data: [] })
-  ]);
+  if (!json.success) throw new Error(json.message || 'Error fetching dashboard');
+
+  // Fetch info separately as it might be in a different public route
+  const infoRes = await fetch(`${baseUrl}/informacion`);
+  const infoJson = await infoRes.json();
 
   return {
-    monthly: {
-      paradas:   mParadas.success   ? mParadas.data   : [],
-      produccion: mProduccion.success ? mProduccion.data : [],
-    },
-    daily: {
-      produccion: dProduccion.success ? dProduccion.data : [],
-    },
-    info: info.success ? info.data : [],
-    velocity: velocity.success ? velocity.data : []
+    ...json.data,
+    info: infoJson.success ? infoJson.data : []
   };
 }
 
@@ -65,40 +53,76 @@ export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('curex_token'));
   const [slideIdx, setSlideIdx] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
+  const [theme, setTheme] = useState('dark');
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
   const queryClient = useQueryClient();
-  const { lastEvent, tvConfig } = useSocket();
+  const { lastEvent, tvConfig: socketConfig } = useSocket();
 
-  // Filtrar slides dinámicamente según la configuración recibida por Sockets
-  const filteredSlides = SLIDES.filter(s => {
-    // Si es el slide de enfoque, solo mostrarlo si hay una máquina asignada
-    if (s.id === 'focus') return !!tvConfig?.maquina_id;
-    return true;
-  }).map(s => {
-    // Si es el slide de enfoque, inyectar el nombre de la máquina dinámicamente
-    if (s.id === 'focus') {
-      return { ...s, props: { maquina: tvConfig.maquina_nombre } };
+  // Resolver configuración: Prioridad URL > Socket
+  const tvConfig = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get('maquina_id');
+    const urlNombre = params.get('maquina_nombre');
+    
+    if (urlId) {
+      return { maquina_id: Number(urlId), maquina_nombre: urlNombre || `MÁQUINA ${urlId}` };
     }
-    return s;
-  });
-
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    return socketConfig;
+  })();
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', tvConfig?.maquina_id],
-    queryFn: () => {
-      console.log(`[Dashboard] Fetching data for machine: ${tvConfig?.maquina_id || 'Global'}`);
-      return fetchDashboard(tvConfig?.maquina_id);
-    },
+    queryFn: () => fetchDashboard(tvConfig?.maquina_id),
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  useEffect(() => {
-    if (data) {
-      console.log('[Dashboard] Data loaded:', data);
+  // Generar slides dinámicamente
+  const filteredSlides = (() => {
+    const base = [
+      {
+        id: 'general',
+        label: 'Vista General',
+        Component: SlideGeneralDashboard,
+        props: { maquina: tvConfig?.maquina_nombre, maquina_id: tvConfig?.maquina_id }
+      }
+    ];
+
+    if (tvConfig?.maquina_id) {
+      // Caso 1: TV tiene una máquina asignada (o forzada por URL)
+      const commonProps = { maquina: tvConfig.maquina_nombre, maquina_id: tvConfig.maquina_id };
+      base.push({
+        id: 'focus',
+        label: `Enfoque ${tvConfig.maquina_nombre}`,
+        Component: SlideMachineFocus,
+        props: commonProps
+      });
+      base.push({ id: 'velocidad', label: 'Velocidad Unitaria', Component: SlideVelocity, props: commonProps });
+      base.push({ id: 'desperdicio', label: 'Desperdicio Unitario', Component: SlideWaste, props: commonProps });
+    } else if (data?.machines?.length > 0) {
+      // Caso 2: TV genérica, rotar por todas las máquinas encontradas en la data
+      data.machines.forEach(m => {
+        const mProps = { maquina: m.nombre, maquina_id: m.id };
+        base.push({
+          id: `focus-${m.id}`,
+          label: `Enfoque ${m.nombre}`,
+          Component: SlideMachineFocus,
+          props: mProps
+        });
+        base.push({ id: `vel-${m.id}`, label: `Velocidad ${m.nombre}`, Component: SlideVelocity, props: mProps });
+        base.push({ id: `desp-${m.id}`, label: `Desperdicio ${m.nombre}`, Component: SlideWaste, props: mProps });
+      });
+      
+      // Análisis globales solo en modo genérico
+      base.push({ id: 'velocidad-global', label: 'Rendimiento Global', Component: SlideVelocity });
+      base.push({ id: 'desperdicio-global', label: 'Desperdicio Global', Component: SlideWaste });
     }
-  }, [data]);
+
+    base.push({ id: 'info', label: 'Información', Component: SlideInfo });
+    base.push({ id: 'productos', label: 'Top Productos', Component: SlideTopProducts });
+
+    return base;
+  })();
 
   /* Invalidar caché cuando llega evento WS */
   useEffect(() => {
@@ -134,7 +158,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div 
+    <div
       className={theme === 'light' ? 'light-theme' : ''}
       style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', background: 'var(--col-bg)' }}
     >
@@ -156,13 +180,25 @@ export default function Dashboard() {
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             style={{ position: 'absolute', inset: 0, padding: '20px 24px 16px' }}
           >
-            <Component 
-              data={id === 'productos' ? data?.daily : id === 'info' ? data?.info : data?.monthly} 
-              velocity={data?.velocity}
-              isLoading={isLoading} 
-              isMonthly={id !== 'productos' && id !== 'info'}
-              {...extraProps} 
-            />
+            {Component ? (
+              <Component
+                data={
+                  id === 'productos' || id.startsWith('focus') || id === 'velocidad' || id === 'desperdicio' ? data?.daily :
+                    id === 'info' ? data?.info :
+                      data?.monthly
+                }
+                velocity={
+                  id.startsWith('focus') || id === 'velocidad' ? data?.daily?.velocidad?.series :
+                    id === 'general' ? data?.monthly?.velocidad :
+                      null
+                }
+                isLoading={isLoading}
+                isMonthly={!(id === 'productos' || id === 'info' || id.startsWith('focus') || id === 'velocidad' || id === 'desperdicio')}
+                {...extraProps}
+              />
+            ) : (
+              <div style={{ color: 'white', padding: 40 }}>Error: Component not found for slide {id}</div>
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -171,11 +207,11 @@ export default function Dashboard() {
       <SlideProgress count={filteredSlides.length} current={slideIdx} duration={SLIDE_DURATION} />
 
       {/* Technical Footer Bar */}
-      <footer style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        padding: '8px 24px', 
+      <footer style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 24px',
         borderTop: '1px solid var(--col-border)',
         fontSize: '10px',
         color: 'var(--col-text-muted)',

@@ -48,15 +48,28 @@ export function SocketProvider({ children }) {
         }
       }
 
+      console.log(`[Socket] Identificando TV: ${tvUid}`);
       socket.emit('tv:identify', {
         uid: tvUid,
-        departamento_id: 2, // Por defecto Producción
+        departamento_id: 2,
         informacion: previewUid ? `VISTA PREVIA - ADMIN` : `TV Display - ${tvUid}`
       });
     });
-    socket.on('disconnect', () => setStatus(WS_STATUS.DISCONNECTED));
-    socket.on('connect_error', () => setStatus(WS_STATUS.ERROR));
-    socket.on('tv:config', (config) => setTvConfig(config));
+
+    socket.on('disconnect', () => {
+      console.log('[Socket] Desconectado');
+      setStatus(WS_STATUS.DISCONNECTED);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('[Socket] Error de conexión:', err);
+      setStatus(WS_STATUS.ERROR);
+    });
+
+    socket.on('tv:config', (config) => {
+      console.log('[Socket] Nueva configuración recibida:', config);
+      setTvConfig(config);
+    });
 
     /* ─ Domain events ─ */
     const EVENTS = ['production-update', 'parada-update', 'velocidad-update', 'info-update'];
