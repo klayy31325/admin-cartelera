@@ -178,7 +178,7 @@ export function ExcelImportForm() {
             type="button"
             onClick={() => sendRequest(false)}
             disabled={isLoading || !file || !maquina}
-            className="h-11 rounded-xl font-black bg-brand hover:bg-brand/90 text-black"
+            className="h-11 rounded-xl font-black bg-brand hover:bg-brand/90 text-white"
           >
             {isLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
             CONFIRMAR IMPORTACIÓN

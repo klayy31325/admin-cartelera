@@ -15,10 +15,10 @@ function StatCard({ label, value, unit, color = 'primary', variant = 'glass' }) 
   const isBrand = variant === 'glass-brand';
   return (
     <div className={variant} style={{ padding: '20px', flex: 1 }}>
-      <p style={{ fontSize: '10px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: '10px', color: isBrand ? 'var(--col-on-brand-muted)' : 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="stat-number" style={{ fontSize: '28px', color: isBrand ? 'white' : colors[color] }}>{value}</span>
-        <span style={{ fontSize: '12px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
+        <span className="stat-number" style={{ fontSize: '28px', color: isBrand ? 'var(--col-on-brand)' : colors[color] }}>{value}</span>
+        <span style={{ fontSize: '12px', color: isBrand ? 'var(--col-on-brand-muted)' : 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
       </div>
     </div>
   );
@@ -70,6 +70,7 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
           </div>
         </div>
         <StatCard label={isMonthly ? "METROS MENSUALES" : "METROS PRODUCIDOS"} value={Number(machineData?.total_metros ?? 0).toLocaleString()} unit="m" color="brand" variant="glass-brand" />
+        <StatCard label="EFICIENCIA DE VELOCIDAD" value={Math.round(efic)} unit="%" color="brand" variant="glass-brand" />
         <StatCard label="TIEMPO PARADA" value={Math.round(totalMinutos)} unit="min" color="warn" />
         <StatCard label="DESPERDICIO" value={Number(desperdicio.total_kg).toFixed(1)} unit="kg" color="danger" />
       </div>
@@ -96,7 +97,7 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
                     <stop offset="95%" stopColor="var(--col-brand)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--col-chart-grid)" />
                 <XAxis dataKey="hora" axisLine={false} tickLine={false} tick={{ fill: 'var(--col-text-muted)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--col-text-muted)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
                 <Tooltip

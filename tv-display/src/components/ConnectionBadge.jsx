@@ -1,10 +1,10 @@
 import { useSocket, WS_STATUS } from '../context/SocketContext';
 
 const STATUS_MAP = {
-  [WS_STATUS.CONNECTED]:    { label: 'SYNC: LIVE UPDATING', color: 'var(--col-success)', dot: true },
-  [WS_STATUS.CONNECTING]:   { label: 'SYNC: CONNECTING...', color: 'var(--col-warn)',    dot: true },
-  [WS_STATUS.DISCONNECTED]: { label: 'SYNC: OFFLINE',       color: 'var(--col-danger)',  dot: false },
-  [WS_STATUS.ERROR]:        { label: 'SYNC: ERROR',         color: 'var(--col-danger)',  dot: false },
+  [WS_STATUS.CONNECTED]:    { label: 'ESTADO: CONECTADO', color: 'var(--col-success)', dot: true },
+  [WS_STATUS.CONNECTING]:   { label: 'ESTADO: CONECTANDO...', color: 'var(--col-warn)',    dot: true },
+  [WS_STATUS.DISCONNECTED]: { label: 'ESTADO: DESCONECTADO',       color: 'var(--col-danger)',  dot: false },
+  [WS_STATUS.ERROR]:        { label: 'ESTADO: ERROR',         color: 'var(--col-danger)',  dot: false },
 };
 
 export default function ConnectionBadge() {
@@ -31,7 +31,7 @@ export default function ConnectionBadge() {
           animation: status === WS_STATUS.CONNECTED ? 'pulse 2s infinite' : 'none'
         }} />
       )}
-      <span>{label}</span>
+      <span style={{ color, fontWeight: status === WS_STATUS.ERROR || status === WS_STATUS.DISCONNECTED ? 700 : 600 }}>{label}</span>
       <style>{`
         @keyframes pulse {
           0% { opacity: 1; transform: scale(1); }

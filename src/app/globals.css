@@ -81,10 +81,10 @@
   }
 
   .theme-curex {
-    --brand: 16 100% 50%;
-    --brand-light: 16 100% 60%;
-    --brand-dark: 16 100% 40%;
-    --ring: 16 100% 50%;
+    --brand: 25 90% 58%;
+    --brand-light: 25 92% 66%;
+    --brand-dark: 25 82% 50%;
+    --ring: 25 90% 58%;
   }
 }
 
@@ -94,6 +94,57 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+.admin-readable {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.admin-readable h1,
+.admin-readable h2,
+.admin-readable h3,
+.admin-readable h4,
+.admin-readable h5,
+.admin-readable h6 {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.admin-readable p,
+.admin-readable span,
+.admin-readable label,
+.admin-readable button,
+.admin-readable input,
+.admin-readable textarea,
+.admin-readable select {
+  font-weight: 500;
+}
+
+/* Superficies naranja sólidas: texto e iconos en blanco (admin) */
+@layer components {
+  .bg-brand,
+  .bg-brand-dark,
+  .bg-brand-light,
+  .hover\:bg-brand:hover,
+  .hover\:bg-brand-dark:hover,
+  .hover\:bg-brand\/90:hover {
+    color: rgb(255 255 255);
+  }
+
+  .bg-brand.text-black,
+  .bg-brand-dark.text-black,
+  .hover\:bg-brand:hover.text-black,
+  .hover\:bg-brand-dark:hover.text-black {
+    color: rgb(255 255 255) !important;
+  }
+
+  .bg-brand svg,
+  .bg-brand-dark svg,
+  .hover\:bg-brand:hover svg {
+    color: currentColor;
   }
 }
 
@@ -185,5 +236,17 @@
     .hover\:bg-white\/\[0\.02\]:hover {
       background-color: rgba(255, 255, 255, 0.02) !important;
     }
+  }
+}
+
+/* TV Card Animations */
+@keyframes tvCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

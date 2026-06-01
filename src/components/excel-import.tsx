@@ -101,7 +101,7 @@ export function ExcelImport() {
             onClick={handleImport}
             disabled={isUploading}
             size="sm"
-            className="bg-brand hover:bg-brand/90 text-black font-black h-7 text-[9px] rounded-lg px-3"
+            className="bg-brand hover:bg-brand/90 text-white font-black h-7 text-[9px] rounded-lg px-3"
           >
             {isUploading ? (
               <Loader2 className="animate-spin" size={12} />

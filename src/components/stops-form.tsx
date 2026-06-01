@@ -282,7 +282,7 @@ export function StopsForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-black font-black px-10 h-12 text-[15px] rounded-xl shadow-2xl shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black px-10 h-12 text-[15px] rounded-xl shadow-2xl shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               {isSubmitting ? (
                 <Loader2 className="animate-spin mr-2" size={20} />

@@ -59,7 +59,7 @@ export function Sidebar() {
         <Link href="/admin/production" className="flex items-center gap-4 group">
           <div className="relative">
             <div className="w-11 h-11 bg-zinc-900/50 border border-zinc-800 rounded-xl flex items-center justify-center p-2 shadow-[0_0_15px_rgba(249,115,22,0.15)] group-hover:scale-105 transition-all duration-500">
-              <img src="/logo-curex.png" alt="Curex Logo" className="w-full h-full object-contain" />
+              <img src="/logo-curex.png" alt="Curex Logo" className="w-full h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
             </div>
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-zinc-950 rounded-full" />
           </div>

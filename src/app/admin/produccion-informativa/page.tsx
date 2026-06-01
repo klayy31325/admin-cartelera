@@ -6,16 +6,20 @@ import { ClipboardList } from "lucide-react";
 export default function ProduccionInformativaPage() {
   return (
     <main className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-4 bg-brand/5 border border-brand/10 p-6 rounded-[2.5rem] relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-[50px] -mr-10 -mt-10 rounded-full group-hover:bg-brand/20 transition-all duration-700" />
-        
-        <div className="p-4 rounded-3xl bg-brand/10 border border-brand/20">
-          <ClipboardList className="w-8 h-8 text-brand" />
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-zinc-200/5 dark:border-white/[0.04] bg-zinc-100/50 dark:bg-zinc-900/30 p-5 rounded-lg relative overflow-hidden">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-brand">
+            <ClipboardList size={12} />
+            PLANIFICACIÓN // METAS DIARIAS
+          </div>
+          <h1 className="text-base font-black tracking-widest text-foreground uppercase mt-1">
+            PRODUCCIÓN INFORMATIVA
+          </h1>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider leading-relaxed">
+            Asignación, seguimiento y control de metas y tareas diarias por máquina para visualización interactiva.
+          </p>
         </div>
-                    <h1 className="text-3xl font-black uppercase tracking-tighter text-black dark:text-white">Planificación Diaria</h1>
-            <p className="text-xs font-black text-zinc-500 dark:text-zinc-500 uppercase tracking-[0.3em]">Gestión de producción informativa</p>
-
-      </div>
+      </header>
 
       <ProduccionInformativaManager />
     </main>

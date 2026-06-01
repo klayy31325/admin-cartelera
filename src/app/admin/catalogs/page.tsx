@@ -71,14 +71,20 @@ export default function CatalogsPage() {
 
   return (
     <main className="p-8 max-w-6xl mx-auto">
-      <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-brand">
-          Gestión de Catálogos
-        </h1>
-        <p className="text-slate-400">
-          Administra los clientes, productos y razones de parada del sistema.
-        </p>
-      </div>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-zinc-200/5 dark:border-white/[0.04] bg-zinc-100/50 dark:bg-zinc-900/30 p-5 rounded-lg relative overflow-hidden mb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-brand">
+            <Database size={12} />
+            MANTENIMIENTO // TABLAS
+          </div>
+          <h1 className="text-base font-black tracking-widest text-foreground uppercase mt-1">
+            GESTIÓN DE CATÁLOGOS
+          </h1>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider leading-relaxed">
+            Administración centralizada de clientes, productos y razones de parada del sistema.
+          </p>
+        </div>
+      </header>
 
       <Tabs defaultValue="clients" className="space-y-6">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -114,7 +120,7 @@ export default function CatalogsPage() {
                   <Button
                     onClick={() => handleAddItem(type.slice(0, -1))}
                     disabled={adding || !newItemName}
-                    className="bg-brand hover:bg-brand-dark text-slate-950"
+                    className="bg-brand hover:bg-brand-dark text-white"
                   >
                     {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   </Button>

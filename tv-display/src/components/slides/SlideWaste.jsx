@@ -11,29 +11,29 @@ function WasteKpi({ label, value, unit, color = 'var(--col-brand)', variant = 'g
   const isBrand = variant === 'glass-brand';
   return (
     <div className={variant} style={{ padding: '24px', flex: 1 }}>
-      <p style={{ fontSize: '10px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: '10px', color: isBrand ? 'var(--col-on-brand-muted)' : 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="stat-number" style={{ fontSize: '32px', color: isBrand ? 'white' : color }}>{value}</span>
-        <span style={{ fontSize: '12px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
+        <span className="stat-number" style={{ fontSize: '32px', color: isBrand ? 'var(--col-on-brand)' : color }}>{value}</span>
+        <span style={{ fontSize: '12px', color: isBrand ? 'var(--col-on-brand-muted)' : 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
       </div>
     </div>
   );
 }
 
 function AnimatedGiantTrashCan({ valueKg, valueMl }) {
-  // Rellenamos el bote visualmente a un 75% fijo como estética (ya que no hay un límite máximo definido)
-  const percentage = 75; 
-  
+  const percentage = 75;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 50, height: '100%', justifyContent: 'center' }}>
-      <div style={{ 
-        width: 380, height: 500, 
-        border: '12px solid rgba(255,255,255,0.1)', 
-        borderTop: 'none', 
-        borderRadius: '0 0 32px 32px', 
-        position: 'relative', 
+      <div style={{
+        width: 380,
+        height: 500,
+        border: '12px solid rgba(255,255,255,0.1)',
+        borderTop: 'none',
+        borderRadius: '0 0 32px 32px',
+        position: 'relative',
         overflow: 'visible',
-        background: 'rgba(0,0,0,0.2)'
+        background: 'rgba(0,0,0,0.2)',
       }}>
         {/* Tapa del contenedor */}
         <div style={{ 
@@ -69,7 +69,6 @@ function AnimatedGiantTrashCan({ valueKg, valueMl }) {
         </div>
       </div>
       
-      {/* Datos Abajo */}
       <div style={{ textAlign: 'center', display: 'flex', gap: 80, alignItems: 'center' }}>
         <div>
           <p style={{ fontSize: '90px', fontWeight: 900, color: 'var(--col-danger)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
@@ -77,11 +76,11 @@ function AnimatedGiantTrashCan({ valueKg, valueMl }) {
           </p>
           <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.1em', marginTop: 12 }}>PESO ACUMULADO</p>
         </div>
-        
+
         <div style={{ width: 3, height: 100, background: 'rgba(255,255,255,0.1)' }} />
-        
+
         <div>
-          <p style={{ fontSize: '70px', fontWeight: 800, color: 'white', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
+          <p style={{ fontSize: '70px', fontWeight: 800, color: 'var(--col-text-primary)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
             {valueMl} <span style={{ fontSize: '28px', color: 'var(--col-text-muted)' }}>ml</span>
           </p>
           <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.1em', marginTop: 12 }}>LONGITUD PERDIDA</p>
@@ -104,7 +103,7 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
     : data?.desperdicio ?? { total_kg: 0, total_ml: 0 };
 
   return (
-    <div style={{ display: 'grid', gridTemplateRows: maquina ? '1fr' : 'auto 1fr', gap: 20, height: '100%' }}>
+    <div className="slide-page" style={{ gridTemplateRows: maquina ? '1fr' : 'auto 1fr' }}>
 
       {maquina ? (
         <section className="glass" style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -112,11 +111,9 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
           
           <div style={{ position: 'absolute', top: 40, left: 40, display: 'flex', alignItems: 'center', gap: 20 }}>
             <Trash2 size={48} color="var(--col-danger)" />
-            <div>
-              <h2 style={{ fontSize: '36px', fontWeight: 900, color: 'var(--col-text-primary)', letterSpacing: '0.05em' }}>
-                {maquina}
-              </h2>
-            </div>
+            <h2 style={{ fontSize: '36px', fontWeight: 900, color: 'var(--col-text-primary)', letterSpacing: '0.05em', margin: 0 }}>
+              {maquina}
+            </h2>
           </div>
         </section>
       ) : (

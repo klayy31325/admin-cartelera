@@ -31,25 +31,34 @@ export default function ProductionPage() {
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-900 pb-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-zinc-200/5 dark:border-white/[0.04] bg-zinc-100/50 dark:bg-zinc-900/30 p-5 rounded-lg relative overflow-hidden">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-            <Activity size={12} className="text-brand" />
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-brand">
+            <Activity size={12} />
+            PRODUCCIÓN // BITÁCORA
           </div>
-
+          <h1 className="text-base font-black tracking-widest text-foreground uppercase mt-1">
+            REGISTROS DE PLANTA
+          </h1>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider leading-relaxed">
+            Importación y administración manual del historial de metros, desperdicio y eficiencia operativa.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Export Button */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-6 py-2 bg-zinc-100 hover:bg-zinc-500 border border-zinc-700 hover:border-brand/40 rounded-xl text-[15px] font-black uppercase tracking-widest text-zinc-900 hover:text-brand transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white transition-all"
+            title="Exportar Datos"
           >
-            <Download size={20} />
+            <Download size={14} />
+            Exportar
           </button>
 
-          <div className="px-5 py-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
+          <div className="px-4 py-2.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Sincronizado</span>
           </div>
         </div>
       </header>
@@ -67,7 +76,7 @@ export default function ProductionPage() {
                 flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest
                 transition-all duration-200
                 ${isActive
-                  ? "bg-brand text-black shadow-lg shadow-brand/20"
+                  ? "bg-brand text-white shadow-lg shadow-brand/20"
                   : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
                 }
               `}

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { Manrope } from "next/font/google";
 import { Sidebar } from "@/components/sidebar";
+
+const manrope = Manrope({ subsets: ["latin"] });
 
 export default function AdminLayout({
   children,
@@ -36,7 +39,7 @@ export default function AdminLayout({
   }, []);
 
   return (
-    <div className={`flex min-h-screen bg-background relative transition-colors duration-500 ${themeClass}`}>
+    <div className={`flex min-h-screen bg-background relative transition-colors duration-500 ${themeClass} ${manrope.className}`}>
       {/* Background Alternante Ultra Fluido - Ahora visible en ambos temas con diferentes filtros */}
       <div className="fixed inset-0 z-0 overflow-hidden bg-background">
         {backgrounds.map((bg, index) => (
@@ -65,7 +68,7 @@ export default function AdminLayout({
       <Sidebar />
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-8 lg:p-12 overflow-y-auto relative z-10">
+      <main className="admin-readable flex-1 p-8 lg:p-8 overflow-y-auto relative z-10">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

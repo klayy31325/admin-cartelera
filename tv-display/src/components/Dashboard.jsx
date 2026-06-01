@@ -10,6 +10,7 @@ import SlideInfo from './slides/SlideInfo';
 import SlideVelocity from './slides/SlideVelocity';
 import SlideWaste from './slides/SlideWaste';
 import SlideProductionInfo from './slides/SlideProductionInfo';
+import SlidePendingConfiguration from './slides/SlidePendingConfiguration';
 import TopBar from './TopBar';
 import ConnectionBadge from './ConnectionBadge';
 import Login from './Login';
@@ -100,7 +101,28 @@ export default function Dashboard() {
   const [slideIdx, setSlideIdx] = useState(0);
   const [direction, setDirection] = useState(1);
   const [theme, setTheme] = useState('light');
+  
+  // Smart TV Focus States
+  const [focusZone, setFocusZone] = useState('topbar-nav'); // 'topbar-nav' | 'topbar-actions' | 'slide-content'
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [showFocusVisual, setShowFocusVisual] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isProductionInteracting, setIsProductionInteracting] = useState(false);
+  const interactionTimeoutRef = React.useRef(null);
+
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  // Sincronizar clase de tema con el elemento body
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+  }, [theme]);
+
   const queryClient = useQueryClient();
   const { lastEvent, tvConfig: socketConfig } = useSocket();
 
@@ -116,7 +138,7 @@ export default function Dashboard() {
     return socketConfig;
   })();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['dashboard', tvConfig?.maquina_id],
     queryFn: () => fetchDashboard(tvConfig?.maquina_id),
     refetchInterval: 60_000,
@@ -125,65 +147,58 @@ export default function Dashboard() {
 
   // Generar slides dinámicamente
   const filteredSlides = (() => {
+    // Si la pantalla no tiene una máquina configurada, mostrar únicamente el panel de espera premium
+    if (!tvConfig?.maquina_id) {
+      return [
+        {
+          id: 'pending-config',
+          label: 'VINCULACIÓN REQUERIDA',
+          Component: SlidePendingConfiguration,
+          props: {}
+        }
+      ];
+    }
+
     const base = [
       {
         id: 'general',
-        label: 'Vista General',
+        label: 'VISTA GENERAL',
         Component: SlideGeneralDashboard,
         props: { maquina: tvConfig?.maquina_nombre, maquina_id: tvConfig?.maquina_id }
       }
     ];
 
-    if (tvConfig?.maquina_id) {
-      // Caso 1: TV tiene una máquina asignada (o forzada por URL)
-      const commonProps = { maquina: tvConfig.maquina_nombre, maquina_id: tvConfig.maquina_id };
-      base.push({ id: 'velocidad', label: 'Velocidad Unitaria', Component: SlideVelocity, props: commonProps });
-      base.push({ id: 'produccion-info', label: 'Producción Diaria', Component: SlideProductionInfo, props: commonProps });
-    } else if (data?.machines?.length > 0) {
-      // Caso 2: TV genérica, rotar por todas las máquinas encontradas en la data
-      data.machines.forEach(m => {
-        const mProps = { maquina: m.nombre, maquina_id: m.id };
-        base.push({ id: `vel-${m.id}`, label: `Velocidad ${m.nombre}`, Component: SlideVelocity, props: mProps });
-        base.push({ id: `desp-${m.id}`, label: `Desperdicio ${m.nombre}`, Component: SlideWaste, props: mProps });
-        base.push({
-          id: `prod-info-${m.id}`,
-          label: `Metas ${m.nombre}`,
-          Component: SlideProductionInfo,
-          props: mProps
-        });
-      });
-
-      // Análisis globales solo en modo genérico
-      base.push({ id: 'velocidad-global', label: 'Rendimiento Global', Component: SlideVelocity });
-      base.push({ id: 'desperdicio-global', label: 'Desperdicio Global', Component: SlideWaste });
-    }
-
-    base.push({ id: 'info', label: 'Información', Component: SlideInfo });
-
-    // Solo mostrar paneles globales/de planta si es una TV genérica sin máquina asignada
-    if (!tvConfig?.maquina_id) {
-      base.push({ id: 'produccion-info-global', label: 'Producción Diaria', Component: SlideProductionInfo });
-      base.push({ id: 'productos', label: 'Top Productos', Component: SlideTopProducts });
-    }
+    // Caso 1: TV tiene una máquina asignada (o forzada por URL)
+    const commonProps = { maquina: tvConfig.maquina_nombre, maquina_id: tvConfig.maquina_id };
+    base.push({ id: 'velocidad', label: 'VELOCIDAD UNITARIA', Component: SlideVelocity, props: commonProps });
+    base.push({ id: 'produccion-info', label: 'PRODUCCIÓN DIARIA', Component: SlideProductionInfo, props: commonProps });
+    base.push({ id: 'info', label: 'INFORMACIÓN', Component: SlideInfo });
 
     return base;
   })();
 
-  /* Invalidar caché cuando llega evento WS */
+  /* Invalidar caché y forzar refetch inmediato cuando llega evento WS con pequeño delay preventivo */
   useEffect(() => {
-    if (lastEvent) queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-  }, [lastEvent, queryClient]);
+    if (lastEvent) {
+      console.log('[Dashboard] Evento real-time recibido:', lastEvent.type);
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      const timer = setTimeout(() => {
+        refetch();
+      }, 500);
 
-  // El modo TV fue removido para garantizar el renderizado responsive nativo sin zoom forzado
+      return () => clearTimeout(timer);
+    }
+  }, [lastEvent, queryClient, refetch]);
 
-  /* Solicitar pantalla completa automáticamente al primer clic o toque (evita el bloqueo de seguridad inicial del navegador) */
+  /* Solicitar pantalla completa automáticamente al primer clic o toque */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const requestFs = () => {
       const doc = document.documentElement;
       if (!document.fullscreenElement && doc.requestFullscreen) {
         doc.requestFullscreen().catch((err) => {
-          console.log(`[Fullscreen] Auto-inicio omitido/bloqueado por políticas del navegador: ${err.message}`);
+          console.log(`[Fullscreen] Auto-inicio omitido: ${err.message}`);
         });
       }
       document.removeEventListener('click', requestFs);
@@ -199,18 +214,64 @@ export default function Dashboard() {
     };
   }, []);
 
+  const handleProductionInteraction = useCallback(() => {
+    const currentId = filteredSlides[slideIdx]?.id;
+    if (!currentId?.startsWith('prod-info') && !currentId?.startsWith('produccion-info')) return;
+
+    setIsProductionInteracting(true);
+
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+    }
+
+    interactionTimeoutRef.current = setTimeout(() => {
+      setIsProductionInteracting(false);
+    }, 10_000);
+  }, [slideIdx, filteredSlides]);
+
+  // Resetear interacción al cambiar de slide
+  useEffect(() => {
+    setIsProductionInteracting(false);
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+    }
+  }, [slideIdx]);
+
   /* Auto-avance de slides */
   const advance = useCallback(() => {
     setDirection(1);
-    setSlideIdx(i => (i + 1) % filteredSlides.length);
-  }, [filteredSlides.length]);
+    setSlideIdx(i => {
+      const next = (i + 1) % filteredSlides.length;
+      if (focusZone === 'topbar-nav') {
+        setFocusedIndex(next);
+      }
+      return next;
+    });
+  }, [filteredSlides.length, focusZone]);
 
+  const currentSlide = filteredSlides[slideIdx];
+  const activeDuration = currentSlide?.id === 'velocidad' || currentSlide?.id === 'velocidad-global' || currentSlide?.id?.startsWith('vel-') ? 15_000 : SLIDE_DURATION;
+  const isTimerPaused = isPaused || (isProductionInteracting && (currentSlide?.id?.startsWith('prod-info') || currentSlide?.id?.startsWith('produccion-info')));
+
+  // Rotador inteligente con soporte de pausa y duración dinámica
   useEffect(() => {
-    const id = setInterval(advance, SLIDE_DURATION);
-    return () => clearInterval(id);
-  }, [advance]);
+    if (isTimerPaused) return;
 
-  /* Control remoto / Teclado para navegar entre diapositivas de la cartelera */
+    const timer = setTimeout(() => {
+      // Ocultar foco al avanzar de forma automática
+      setShowFocusVisual(false);
+      advance();
+    }, activeDuration);
+
+    return () => clearTimeout(timer);
+  }, [slideIdx, isTimerPaused, advance, activeDuration]);
+
+  const goTo = (idx) => {
+    setDirection(idx > slideIdx ? 1 : -1);
+    setSlideIdx(idx);
+  };
+
+  /* Focus Manager y Control Remoto */
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Omitir si hay campos de texto enfocados
@@ -218,22 +279,154 @@ export default function Dashboard() {
         return;
       }
 
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        advance();
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        setDirection(-1);
-        setSlideIdx(i => (i - 1 + filteredSlides.length) % filteredSlides.length);
+      // Atajos físicos del mando (Color Keys y Teclado)
+      const isRed = e.keyCode === 403 || e.key === 'r' || e.key === 'R';
+      const isGreen = e.keyCode === 404 || e.key === 'g' || e.key === 'G';
+      const isYellow = e.keyCode === 405 || e.key === 'y' || e.key === 'Y';
+      const isBlue = e.keyCode === 406 || e.key === 'b' || e.key === 'B';
+
+      // Atajo numérico (1-9) para saltar directo a slides
+      if (e.key >= '1' && e.key <= '9') {
+        const idx = Number(e.key) - 1;
+        if (idx < filteredSlides.length) {
+          e.preventDefault();
+          goTo(idx);
+          setFocusZone('topbar-nav');
+          setFocusedIndex(idx);
+          setShowFocusVisual(true);
+          return;
+        }
+      }
+
+      if (isRed) {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
+      if (isGreen) {
+        e.preventDefault();
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        return;
+      }
+      if (isYellow) {
+        e.preventDefault();
+        setIsPaused(p => !p);
+        return;
+      }
+      if (isBlue) {
+        e.preventDefault();
+        const doc = document.documentElement;
+        if (!document.fullscreenElement) {
+          doc.requestFullscreen().catch(err => console.log(err));
+        } else {
+          document.exitFullscreen().catch(err => console.log(err));
+        }
+        return;
+      }
+
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) || 
+                      [38, 40, 37, 39].includes(e.keyCode);
+
+      // Activar la visualización del foco en la primera interacción de D-Pad
+      if (isArrow && !showFocusVisual) {
+        setShowFocusVisual(true);
+        setFocusZone('topbar-nav');
+        setFocusedIndex(slideIdx);
+        e.preventDefault();
+        return;
+      }
+
+      const isUp = e.key === 'ArrowUp' || e.keyCode === 38;
+      const isDown = e.key === 'ArrowDown' || e.keyCode === 40;
+      const isLeft = e.key === 'ArrowLeft' || e.keyCode === 37;
+      const isRight = e.key === 'ArrowRight' || e.keyCode === 39;
+      const isEnter = e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32;
+
+      // Determinar si la diapositiva actual es interactiva
+      const currentSlide = filteredSlides[slideIdx];
+      const isSlideInteractive = currentSlide?.Component === SlideProductionInfo;
+      const isProdInteractionKey = isArrow || isEnter;
+
+      if (isSlideInteractive && isProdInteractionKey) {
+        handleProductionInteraction();
+      }
+
+      if (focusZone === 'topbar-nav') {
+        if (isLeft) {
+          e.preventDefault();
+          const nextIdx = (focusedIndex - 1 + filteredSlides.length) % filteredSlides.length;
+          setFocusedIndex(nextIdx);
+          goTo(nextIdx);
+        } else if (isRight) {
+          e.preventDefault();
+          if (focusedIndex === filteredSlides.length - 1) {
+            setFocusZone('topbar-actions');
+            setFocusedIndex(0);
+          } else {
+            const nextIdx = (focusedIndex + 1) % filteredSlides.length;
+            setFocusedIndex(nextIdx);
+            goTo(nextIdx);
+          }
+        } else if (isDown) {
+          e.preventDefault();
+          if (isSlideInteractive) {
+            setFocusZone('slide-content');
+          }
+        }
+      } else if (focusZone === 'topbar-actions') {
+        const actionsCount = 3; // Install PWA, Fullscreen, Theme
+        if (isLeft) {
+          e.preventDefault();
+          if (focusedIndex === 0) {
+            setFocusZone('topbar-nav');
+            setFocusedIndex(filteredSlides.length - 1);
+          } else {
+            setFocusedIndex(focusedIndex - 1);
+          }
+        } else if (isRight) {
+          e.preventDefault();
+          if (focusedIndex < actionsCount - 1) {
+            setFocusedIndex(focusedIndex + 1);
+          }
+        } else if (isDown) {
+          e.preventDefault();
+          if (isSlideInteractive) {
+            setFocusZone('slide-content');
+          }
+        } else if (isEnter) {
+          e.preventDefault();
+          if (focusedIndex === 0) {
+            const installBtn = document.querySelector('[title*="Instalar"]');
+            if (installBtn) installBtn.click();
+          } else if (focusedIndex === 1) {
+            const fsBtn = document.querySelector('[title*="completa"]');
+            if (fsBtn) fsBtn.click();
+          } else if (focusedIndex === 2) {
+            toggleTheme();
+          }
+        }
+      } else if (focusZone === 'slide-content') {
+        // En slide-content, delegamos navegación vertical y Enter al slide.
+        // Pero la navegación horizontal (izquierda/derecha) cambia slides globalmente.
+        if (isLeft) {
+          e.preventDefault();
+          const nextIdx = (slideIdx - 1 + filteredSlides.length) % filteredSlides.length;
+          goTo(nextIdx);
+          setFocusZone('topbar-nav');
+          setFocusedIndex(nextIdx);
+        } else if (isRight) {
+          e.preventDefault();
+          const nextIdx = (slideIdx + 1) % filteredSlides.length;
+          goTo(nextIdx);
+          setFocusZone('topbar-nav');
+          setFocusedIndex(nextIdx);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [advance, filteredSlides.length]);
-
-  const goTo = (idx) => {
-    setDirection(idx > slideIdx ? 1 : -1);
-    setSlideIdx(idx);
-  };
+  }, [filteredSlides, slideIdx, focusedIndex, focusZone, showFocusVisual, isPaused, advance, handleProductionInteraction]);
 
   const { id, Component, props: extraProps = {} } = filteredSlides[slideIdx] || filteredSlides[0];
 
@@ -248,10 +441,7 @@ export default function Dashboard() {
    } */
 
   return (
-    <div
-      className={theme === 'light' ? 'light-theme' : ''}
-      style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', background: 'var(--col-bg)' }}
-    >
+    <div className={`tv-shell${theme === 'light' ? ' light-theme' : ''}`}>
       <TopBar
         slides={filteredSlides}
         current={slideIdx}
@@ -259,10 +449,13 @@ export default function Dashboard() {
         theme={theme}
         toggleTheme={toggleTheme}
         maquina={tvConfig?.maquina_nombre}
+        focusZone={focusZone}
+        focusedIndex={focusedIndex}
+        showFocusVisual={showFocusVisual}
       />
 
       <main
-        style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+        className="tv-shell__main"
         aria-live="polite"
         aria-label="Panel de monitoreo industrial"
       >
@@ -275,11 +468,11 @@ export default function Dashboard() {
             animate="center"
             exit="exit"
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              padding: '20px 24px 16px',
-            }}
+            className="tv-slide"
+            onMouseMove={id.startsWith('prod-info') || id.startsWith('produccion-info') ? handleProductionInteraction : undefined}
+            onClick={id.startsWith('prod-info') || id.startsWith('produccion-info') ? handleProductionInteraction : undefined}
+            onTouchStart={id.startsWith('prod-info') || id.startsWith('produccion-info') ? handleProductionInteraction : undefined}
+            onKeyDown={id.startsWith('prod-info') || id.startsWith('produccion-info') ? handleProductionInteraction : undefined}
           >
             {Component ? (
               <Component
@@ -296,6 +489,13 @@ export default function Dashboard() {
                 }
                 isLoading={isLoading}
                 isMonthly={id === 'general' ? true : !(id === 'productos' || id === 'info' || id.startsWith('vel') || id.startsWith('desp'))}
+                isFocused={showFocusVisual && focusZone === 'slide-content'}
+                onExitFocus={(dir) => {
+                  if (dir === 'up') {
+                    setFocusZone('topbar-nav');
+                    setFocusedIndex(slideIdx);
+                  }
+                }}
                 {...extraProps}
               />
             ) : (
@@ -306,28 +506,40 @@ export default function Dashboard() {
       </main>
 
       {/* Slide progress bar */}
-      <SlideProgress count={filteredSlides.length} current={slideIdx} duration={SLIDE_DURATION} />
+      <SlideProgress count={filteredSlides.length} current={slideIdx} duration={activeDuration} isPaused={isTimerPaused} />
 
       {/* Technical Footer Bar */}
-      <footer style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 24px',
-        borderTop: '1px solid var(--col-border)',
-        fontSize: '10px',
-        color: 'var(--col-text-muted)',
-        fontFamily: 'var(--font-mono)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.12em'
-      }}>
-        <div style={{ display: 'flex', gap: 24 }}>
-          <span><span style={{ color: 'var(--col-brand)' }}>●</span> UNIT: {tvConfig?.maquina_nombre || 'CUREX-SYS-01'}</span>
+      <footer className="tv-footer">
+        <div className="tv-footer__meta">
+          <span><span style={{ color: 'var(--col-brand)' }}>●</span> UNIDAD: {tvConfig?.maquina_nombre || 'CUREX-SYS-01'}</span>
           <span>UID: {localStorage.getItem('tv_uid')?.substring(0, 8)}</span>
           <span>LOCATION: {tvConfig?.maquina_nombre ? `LINEA ${tvConfig.maquina_nombre}` : 'PLANTA GENERAL'}</span>
         </div>
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-
+        <div className="tv-footer__actions">
+          {isPaused && (
+            <span style={{
+              background: 'var(--col-brand-dim)',
+              color: 'var(--col-brand)',
+              border: '1px solid var(--col-brand-glow)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '9px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}>
+              <span style={{
+                display: 'inline-block',
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: 'var(--col-brand)',
+                animation: 'pulse 1.5s infinite ease-in-out'
+              }} />
+              AUTOROTATE: PAUSED
+            </span>
+          )}
           <ConnectionBadge />
         </div>
       </footer>
@@ -335,12 +547,12 @@ export default function Dashboard() {
   );
 }
 
-function SlideProgress({ count, current, duration }) {
+function SlideProgress({ count, current, duration, isPaused }) {
   return (
     <div
       role="tablist"
       aria-label="Diapositivas"
-      style={{ display: 'flex', gap: 6, padding: '8px 24px 12px', zIndex: 'var(--z-nav)' }}
+      className="tv-progress"
     >
       {Array.from({ length: count }).map((_, i) => (
         <div
@@ -358,10 +570,10 @@ function SlideProgress({ count, current, duration }) {
         >
           {i === current && (
             <motion.div
-              key={`${current}-progress`}
+              key={`${current}-progress-${isPaused ? 'paused' : 'active'}`}
               initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: duration / 1000, ease: 'linear' }}
+              animate={{ scaleX: isPaused ? 0 : 1 }}
+              transition={{ duration: isPaused ? 0 : duration / 1000, ease: 'linear' }}
               style={{
                 position: 'absolute', inset: 0,
                 background: 'var(--col-brand)',

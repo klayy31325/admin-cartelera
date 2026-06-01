@@ -99,7 +99,7 @@ export function TrabajoForm() {
       {/* HUD de Resumen Superior */}
       <Card className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-white/[0.05] p-6 sticky top-4 z-30 shadow-xl rounded-xl flex flex-wrap items-center justify-between gap-6 overflow-hidden">
         <div className="flex items-center gap-4 relative">
-          <div className="bg-brand w-12 h-12 rounded-xl flex items-center justify-center text-black shadow-lg shadow-brand/20">
+          <div className="bg-brand w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand/20">
             <ClipboardList size={24} strokeWidth={2.5} />
           </div>
           <div>
@@ -481,7 +481,7 @@ export function TrabajoForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full md:w-64 bg-brand hover:bg-brand/90 text-black font-black h-20 rounded-xl shadow-xl transition-all hover:scale-[1.02] uppercase tracking-widest flex flex-col gap-1.5"
+              className="w-full md:w-64 bg-brand hover:bg-brand/90 text-white font-black h-20 rounded-xl shadow-xl transition-all hover:scale-[1.02] uppercase tracking-widest flex flex-col gap-1.5"
             >
               {isSubmitting ? (
                 <Loader2 className="animate-spin" size={24} />

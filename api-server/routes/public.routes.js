@@ -57,42 +57,100 @@ router.get('/produccion-informativa', async (req, res, next) => {
 });
 
 /**
+ * Calcula el mes anterior en formato YYYY-MM
+ */
+function getPreviousMonth(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m - 2, 1); // m-1 es el mes actual (0-indexed), m-2 es el anterior
+  return d.toISOString().slice(0, 7);
+}
+
+/**
+ * Obtiene datos mensuales agregados para un mes dado
+ */
+async function fetchMonthlyData(month, mId) {
+  const [prodMes, paradasMes, velMes, despMes, velBreakdown, despBreakdown] = await Promise.all([
+    produccionRepository.getSummaryByMonth(month, mId),
+    paradasRepository.getSummaryByMonth(month, mId),
+    velocidadRepository.getResumenMes(month, mId),
+    desperdiciosRepository.getSummaryByMonth(month, mId),
+    velocidadRepository.getBreakdownByMachine(null, month),
+    desperdiciosRepository.getBreakdownByMachine(null, month)
+  ]);
+
+  return {
+    produccion: prodMes,
+    paradas: paradasMes,
+    velocidad: velMes,
+    desperdicio: despMes,
+    breakdown_velocidad: velBreakdown,
+    breakdown_desperdicio: despBreakdown
+  };
+}
+
+/**
+ * Verifica si los datos mensuales están vacíos
+ * (sin metros producidos Y sin registros de velocidad)
+ */
+function isMonthlyDataEmpty(monthlyData) {
+  const totalMetros = (monthlyData.produccion || [])
+    .reduce((sum, row) => sum + Number(row.total_metros || 0), 0);
+  const velRegistros = Number(monthlyData.velocidad?.registros || 0);
+  return totalMetros === 0 && velRegistros === 0;
+}
+
+/**
  * GET /api/public/dashboard?maquina_id=2
  * Retorna estadísticas simplificadas para la cartelera sin requerir token.
+ * Si el mes actual no tiene datos, usa automáticamente el mes anterior (fallback).
  */
 router.get('/dashboard', async (req, res, next) => {
   try {
     const { maquina_id } = req.query;
     const mId = maquina_id ? Number(maquina_id) : null;
     const today = new Date().toISOString().split('T')[0];
-    const month = today.slice(0, 7);
+    const currentMonth = today.slice(0, 7);
 
     const { pool } = require('../config/db');
     
+    // Fetch datos diarios + máquinas (siempre del día actual)
     const [
-      machines, 
-      prodHoy, prodMes, 
-      paradasHoy, paradasMes,
-      velHoy, velMes, velSeries,
-      despHoy, despMes,
+      machines,
+      prodHoy,
+      paradasHoy,
+      velHoy, velSeries,
+      despHoy,
       trabajosHoy,
       velHoyBreakdown,
       despHoyBreakdown
     ] = await Promise.all([
       pool.execute('SELECT id, nombre FROM maquinas WHERE empresa_id = 2 ORDER BY nombre ASC').then(([r]) => r),
       produccionRepository.getSummaryByDate(today, mId),
-      produccionRepository.getSummaryByMonth(month, mId),
       paradasRepository.getSummaryByDate(today, mId),
-      paradasRepository.getSummaryByMonth(month, mId),
       velocidadRepository.getResumenHoy(mId),
-      velocidadRepository.getResumenMes(month, mId),
       velocidadRepository.getSeriesHoy(mId),
       desperdiciosRepository.getSummaryByDate(today, mId),
-      desperdiciosRepository.getSummaryByMonth(month, mId),
       produccionRepository.getRecentTrabajos(today, mId),
       velocidadRepository.getBreakdownByMachine(today),
       desperdiciosRepository.getBreakdownByMachine(today)
     ]);
+
+    // Datos mensuales con fallback automático al mes anterior
+    let monthlyData = await fetchMonthlyData(currentMonth, mId);
+    let dataMonth = currentMonth;
+    let fallbackMonth = null;
+
+    if (isMonthlyDataEmpty(monthlyData)) {
+      const prevMonth = getPreviousMonth(currentMonth);
+      const prevData = await fetchMonthlyData(prevMonth, mId);
+      
+      if (!isMonthlyDataEmpty(prevData)) {
+        monthlyData = prevData;
+        dataMonth = prevMonth;
+        fallbackMonth = prevMonth;
+        console.log(`[Dashboard] Fallback mensual activado: ${currentMonth} → ${prevMonth}`);
+      }
+    }
 
     res.json({
       success: true,
@@ -107,13 +165,10 @@ router.get('/dashboard', async (req, res, next) => {
           breakdown_velocidad: velHoyBreakdown,
           breakdown_desperdicio: despHoyBreakdown
         },
-        monthly: { 
-          produccion: prodMes, 
-          paradas: paradasMes,
-          velocidad: velMes,
-          desperdicio: despMes,
-          breakdown_velocidad: await velocidadRepository.getBreakdownByMachine(null, month),
-          breakdown_desperdicio: await desperdiciosRepository.getBreakdownByMachine(null, month)
+        monthly: {
+          ...monthlyData,
+          _dataMonth: dataMonth,
+          _fallbackMonth: fallbackMonth
         },
         lastSync: new Date().toISOString()
       }

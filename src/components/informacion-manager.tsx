@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from "@/lib/api-config";
@@ -40,6 +41,10 @@ export function InformacionManager() {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  
+  // Estados para el Modal de Confirmación de Eliminación
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({ 
     titulo: "", 
@@ -140,14 +145,24 @@ export function InformacionManager() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar este anuncio permanentemente?")) return;
+  // Abre el modal de confirmación asignando el ID correspondiente
+  const triggerDeleteConfirm = (id: number) => {
+    setDeleteId(id);
+    setIsDeleteOpen(true);
+  };
+
+  // Ejecuta la petición de borrado definitivo tras confirmar
+  const handleConfirmedDelete = async () => {
+    if (!deleteId) return;
     try {
-      await fetch(`${API_BASE_URL}/informacion/${id}`, { method: "DELETE" });
-      toast.success("Eliminado");
+      await fetch(`${API_BASE_URL}/informacion/${deleteId}`, { method: "DELETE" });
+      toast.success("Eliminado con éxito");
       fetchInformaciones();
     } catch (error) {
-      toast.error("Error al eliminar");
+      toast.error("Error al eliminar el registro");
+    } finally {
+      setIsDeleteOpen(false);
+      setDeleteId(null);
     }
   };
 
@@ -166,7 +181,7 @@ export function InformacionManager() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
         
         <div className="flex items-center gap-6 relative z-10">
-          <div className="w-16 h-16 bg-brand flex items-center justify-center text-black rounded-2xl shadow-xl shadow-brand/20">
+          <div className="w-16 h-16 bg-brand flex items-center justify-center text-white rounded-2xl shadow-xl shadow-brand/20">
             <Megaphone size={32} strokeWidth={2.5} />
           </div>
           <div>
@@ -179,7 +194,7 @@ export function InformacionManager() {
           onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className={cn(
             "h-16 px-10 rounded-xl font-black uppercase tracking-[0.2em] transition-all relative z-10",
-            isAdding ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500" : "bg-brand text-black hover:scale-105 shadow-xl shadow-brand/20"
+            isAdding ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500" : "bg-brand text-white hover:scale-105 shadow-xl shadow-brand/20"
           )}
         >
           {isAdding ? <><X size={20} className="mr-2" /> Cancelar</> : <><Plus size={20} className="mr-2" /> Nuevo Aviso</>}
@@ -190,8 +205,8 @@ export function InformacionManager() {
       {isAdding && (
         <Card className="p-10 bg-white dark:bg-zinc-900/40 border-2 border-brand/20 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-500">
           <form onSubmit={handleSubmit} className="space-y-10">
+            {/* ... [Mantener los campos del formulario intactos para ahorrar espacio] ... */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Contenido */}
               <div className="space-y-8">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cabecera del Mensaje</label>
@@ -213,7 +228,6 @@ export function InformacionManager() {
                 </div>
               </div>
 
-              {/* Configuración de Prioridad y Fechas */}
               <div className="space-y-8 bg-zinc-50/50 dark:bg-white/[0.02] p-8 rounded-2xl border border-zinc-200/50 dark:border-white/[0.03]">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
@@ -228,7 +242,7 @@ export function InformacionManager() {
                         className={cn(
                           "h-14 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                           formData.prioridad === p 
-                            ? "bg-brand text-black border-brand shadow-lg shadow-brand/20" 
+                            ? "bg-brand text-white border-brand shadow-lg shadow-brand/20" 
                             : "bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] text-zinc-400 hover:border-brand/30"
                         )}
                       >
@@ -266,7 +280,7 @@ export function InformacionManager() {
             </div>
             
             <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-brand text-black font-black px-20 h-20 rounded-xl uppercase tracking-[0.3em] text-lg hover:scale-105 transition-all shadow-2xl shadow-brand/30">
+              <Button type="submit" className="bg-brand text-white font-black px-20 h-20 rounded-xl uppercase tracking-[0.3em] text-lg hover:scale-105 transition-all shadow-2xl shadow-brand/30">
                 {editingId ? "Actualizar Registro" : "Publicar Aviso"}
               </Button>
             </div>
@@ -363,7 +377,7 @@ export function InformacionManager() {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => handleDelete(info.id)}
+                    onClick={() => triggerDeleteConfirm(info.id)}
                     className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/30"
                   >
                     <Trash2 size={18} />
@@ -374,6 +388,41 @@ export function InformacionManager() {
           )}
         </div>
       )}
+
+      {/* Ventana Modal de Confirmación Crítica (Destructiva) */}
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => { if (!open) { setIsDeleteOpen(false); setDeleteId(null); } }}>
+        <DialogContent className="max-w-md p-8 bg-white dark:bg-zinc-950 border border-red-500/20 rounded-2xl shadow-2xl">
+          <DialogHeader className="space-y-4 text-center sm:text-left">
+            <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl flex items-center justify-center mx-auto sm:mx-0 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+              <AlertTriangle size={26} strokeWidth={2.5} />
+            </div>
+            <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tighter leading-none">
+              ¿Confirmar Eliminación Definitiva?
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed">
+              Esta operación es irreversible y purgará de forma permanente el aviso de la base de datos central. Los clientes dejarán de visualizar este elemento inmediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 mt-4 border-t border-zinc-100 dark:border-white/[0.05]">
+            <Button 
+              type="button" 
+              variant="ghost"
+              onClick={() => { setIsDeleteOpen(false); setDeleteId(null); }}
+              className="h-12 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Abortar
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleConfirmedDelete}
+              className="bg-red-600 hover:bg-red-700 text-white font-black px-6 h-12 rounded-xl uppercase tracking-widest text-[10px] transition-all shadow-xl shadow-red-600/10"
+            >
+              Proceder con Borrado
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

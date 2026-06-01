@@ -5,14 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function SlideInfo({ data, isLoading }) {
   const [currentPage, setCurrentPage] = useState(0);
 
-  if (isLoading) return <LoadingState />;
-
   const announcements = Array.isArray(data) ? data : [];
 
-  if (announcements.length === 0) return <EmptyState />;
-
   // Dividir los comunicados en páginas de máximo 4 items cada una (columna única)
-  const PAGE_SIZE = 4;
+  const PAGE_SIZE = 5;
   const pageCount = Math.ceil(announcements.length / PAGE_SIZE);
 
   const pages = [];
@@ -32,6 +28,10 @@ export default function SlideInfo({ data, isLoading }) {
     }, 6000); // Cambia de página cada 6 segundos
     return () => clearInterval(interval);
   }, [pageCount]);
+
+  if (isLoading) return <LoadingState />;
+
+  if (announcements.length === 0) return <EmptyState />;
 
   const currentAnnouncements = pages[currentPage] || [];
 
@@ -102,95 +102,112 @@ const InfoCard = ({ info }) => {
 
   return (
     <div
+      className={isHighPriority ? 'tv-priority-high' : undefined}
       style={{
-        background: isHighPriority ? 'var(--col-brand)' : 'var(--col-glass)',
+        background: isHighPriority ? 'var(--col-brand)' : 'var(--col-surface-md)',
         padding: '10px 18px',
         borderRadius: 12,
         border: isHighPriority ? 'none' : '1px solid var(--col-border)',
+        boxShadow: isHighPriority ? '0 4px 14px rgba(249, 115, 22, 0.25)' : '0 2px 12px rgba(0, 0, 0, 0.05)',
         display: 'flex',
         alignItems: 'center',
         gap: 16,
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: isHighPriority ? '0 6px 12px rgba(184, 115, 51, 0.08)' : 'none',
-        minHeight: '64px'
+        minHeight: '64px',
       }}
     >
-      {/* Icono */}
-      <div style={{
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        background: isHighPriority ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.03)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: isHighPriority ? 'black' : 'var(--col-brand)',
-        flexShrink: 0
-      }}>
+      <div
+        className={isHighPriority ? 'tv-priority-high__icon-box' : undefined}
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: isHighPriority ? undefined : 'var(--col-gauge-track)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: isHighPriority ? undefined : 'var(--col-brand)',
+          flexShrink: 0,
+        }}
+      >
         <Icon size={14} />
       </div>
 
-      {/* Metadata */}
       <div style={{ minWidth: 80 }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          marginBottom: 1
-        }}>
-          <Calendar size={10} color={isHighPriority ? 'rgba(0,0,0,0.5)' : 'var(--col-brand)'} />
-          <span style={{
-            fontSize: '8px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            color: isHighPriority ? 'rgba(0,0,0,0.6)' : 'var(--col-text-muted)'
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 1 }}>
+          <Calendar size={10} color={isHighPriority ? '#ffffff' : 'var(--col-brand)'} />
+          <span
+            className={isHighPriority ? 'tv-priority-high__muted' : undefined}
+            style={{
+              fontSize: '8px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              color: isHighPriority ? undefined : 'var(--col-text-muted)',
+            }}
+          >
             FECHA
           </span>
         </div>
-        <div style={{
-          fontSize: '10px',
-          fontWeight: 800,
-          color: isHighPriority ? 'black' : 'var(--col-text)',
-          textTransform: 'uppercase'
-        }}>
+        <div
+          className={isHighPriority ? 'tv-priority-high__title' : undefined}
+          style={{
+            fontSize: '10px',
+            fontWeight: 800,
+            color: isHighPriority ? undefined : 'var(--col-text-primary)',
+            textTransform: 'uppercase',
+          }}
+        >
           {new Date(info.fecha_publicacion).toLocaleDateString()}
         </div>
       </div>
 
-      {/* Contenido Principal */}
       <div style={{ flex: 1 }}>
-        <h3 style={{
-          fontSize: '13px',
-          fontWeight: 900,
-          color: isHighPriority ? 'black' : 'var(--col-text)',
-          textTransform: 'uppercase',
-          lineHeight: 1.2,
-          marginBottom: 1
-        }}>
+        <h3
+          className={isHighPriority ? 'tv-priority-high__title' : undefined}
+          style={{
+            fontSize: '13px',
+            fontWeight: 900,
+            color: isHighPriority ? undefined : 'var(--col-text-primary)',
+            textTransform: 'uppercase',
+            lineHeight: 1.2,
+            marginBottom: 1,
+          }}
+        >
           {info.titulo}
         </h3>
-        <p style={{
-          fontSize: '11px',
-          color: isHighPriority ? 'rgba(0,0,0,0.7)' : 'var(--col-text-muted)',
-          fontWeight: 500,
-          lineHeight: 1.3
-        }}>
+        <p
+          className={isHighPriority ? 'tv-priority-high__body' : undefined}
+          style={{
+            fontSize: '11px',
+            color: isHighPriority ? undefined : 'var(--col-text-muted)',
+            fontWeight: 500,
+            lineHeight: 1.3,
+            wordBreak: 'break-word',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {info.contenido}
         </p>
       </div>
 
-      {/* Prioridad Badge */}
       <div style={{ display: 'flex', alignItems: 'center', minWidth: 80 }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          color: isHighPriority ? 'black' : 'var(--col-text-muted)'
-        }}>
-          <AlertTriangle size={10} />
+        <div
+          className={isHighPriority ? 'tv-priority-high__chip' : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: isHighPriority ? '4px 8px' : undefined,
+            borderRadius: isHighPriority ? 6 : undefined,
+            color: isHighPriority ? undefined : 'var(--col-text-muted)',
+          }}
+        >
+          <AlertTriangle size={10} color={isHighPriority ? '#ffffff' : undefined} />
           <span style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {info.prioridad || 'NORMAL'}
           </span>

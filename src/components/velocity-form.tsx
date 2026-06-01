@@ -213,7 +213,7 @@ export function VelocidadForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-brand hover:bg-brand/90 text-black font-black px-10 h-12 text-[15px] rounded-xl shadow-2xl shadow-brand/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-brand hover:bg-brand/90 text-white font-black px-10 h-12 text-[15px] rounded-xl shadow-2xl shadow-brand/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               {isSubmitting ? <Loader2 className="animate-spin mr-2" size={20} /> : <Save className="mr-2" size={20} />}
               REGISTRAR VELOCIDAD

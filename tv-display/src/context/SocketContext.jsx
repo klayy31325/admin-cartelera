@@ -16,9 +16,24 @@ const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
   const socketRef = useRef(null);
+  const wasDisconnectedRef = useRef(false);
   const [status, setStatus] = useState(WS_STATUS.CONNECTING);
   const [lastEvent, setLastEvent] = useState(null);
   const [tvConfig, setTvConfig] = useState({ maquina_id: null, maquina_nombre: null });
+
+  // Auto-recarga preventiva si la desconexión se prolonga más de 20 segundos
+  useEffect(() => {
+    let reloadTimer = null;
+    if (status === WS_STATUS.DISCONNECTED || status === WS_STATUS.ERROR) {
+      reloadTimer = setTimeout(() => {
+        console.log('[Socket] Desconexión prolongada detectada. Recargando para restaurar transmisión...');
+        window.location.reload();
+      }, 20000);
+    }
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+    };
+  }, [status]);
 
   useEffect(() => {
     const socket = io(API_URL, {
@@ -31,6 +46,14 @@ export function SocketProvider({ children }) {
 
     socket.on('connect', () => {
       setStatus(WS_STATUS.CONNECTED);
+
+      // Si veníamos de estar desconectados, forzar recarga para asegurar sincronización limpia
+      if (wasDisconnectedRef.current) {
+        wasDisconnectedRef.current = false;
+        console.log('[Socket] Reconectado. Recargando página para sincronizar...');
+        window.location.reload();
+        return;
+      }
 
       // 1. Verificar si estamos en modo vista previa vía URL
       const urlParams = new URLSearchParams(window.location.search);
@@ -60,11 +83,13 @@ export function SocketProvider({ children }) {
     socket.on('disconnect', () => {
       console.log('[Socket] Desconectado');
       setStatus(WS_STATUS.DISCONNECTED);
+      wasDisconnectedRef.current = true;
     });
 
     socket.on('connect_error', (err) => {
       console.error('[Socket] Error de conexión:', err);
       setStatus(WS_STATUS.ERROR);
+      wasDisconnectedRef.current = true;
     });
 
     socket.on('tv:config', (config) => {

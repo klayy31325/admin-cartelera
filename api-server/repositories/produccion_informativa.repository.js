@@ -7,8 +7,23 @@ class ProduccionInformativaRepository {
       `SELECT pi.*, m.nombre as maquina_nombre 
        FROM produccion_informativa pi
        LEFT JOIN maquinas m ON pi.maquina_id = m.id
-       WHERE pi.empresa_id = ? AND pi.fecha_asignada = ?
-       ORDER BY pi.prioridad DESC`,
+       WHERE pi.empresa_id = ?
+         AND (
+           pi.fecha_asignada = ?
+           OR COALESCE(NULLIF(TRIM(LOWER(pi.estado)), ''), 'pendiente') <> 'completado'
+         )
+       ORDER BY
+         CASE
+           WHEN COALESCE(NULLIF(TRIM(LOWER(pi.estado)), ''), 'pendiente') = 'completado' THEN 1
+           ELSE 0
+         END ASC,
+         CASE pi.prioridad
+           WHEN 'alta' THEN 0
+           WHEN 'media' THEN 1
+           ELSE 2
+         END ASC,
+         pi.fecha_asignada ASC,
+         pi.id ASC`,
       [empresa_id, today]
     );
     return rows;
@@ -20,8 +35,24 @@ class ProduccionInformativaRepository {
       `SELECT pi.*, m.nombre as maquina_nombre 
        FROM produccion_informativa pi
        LEFT JOIN maquinas m ON pi.maquina_id = m.id
-       WHERE pi.maquina_id = ? AND pi.empresa_id = ? AND pi.fecha_asignada = ?
-       ORDER BY pi.prioridad DESC`,
+       WHERE pi.maquina_id = ?
+         AND pi.empresa_id = ?
+         AND (
+           pi.fecha_asignada = ?
+           OR COALESCE(NULLIF(TRIM(LOWER(pi.estado)), ''), 'pendiente') <> 'completado'
+         )
+       ORDER BY
+         CASE
+           WHEN COALESCE(NULLIF(TRIM(LOWER(pi.estado)), ''), 'pendiente') = 'completado' THEN 1
+           ELSE 0
+         END ASC,
+         CASE pi.prioridad
+           WHEN 'alta' THEN 0
+           WHEN 'media' THEN 1
+           ELSE 2
+         END ASC,
+         pi.fecha_asignada ASC,
+         pi.id ASC`,
       [maquina_id, empresa_id, today]
     );
     return rows;

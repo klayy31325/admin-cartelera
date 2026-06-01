@@ -18,8 +18,19 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-10 max-w-4xl">
-      {/* Header Estilo CUREX */}
-      <header className="flex flex-col gap-4 border-b border-border pb-8">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-zinc-200/5 dark:border-white/[0.04] bg-zinc-100/50 dark:bg-zinc-900/30 p-5 rounded-lg relative overflow-hidden">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-brand">
+            <Settings size={12} />
+            SISTEMA // PREFERENCIAS
+          </div>
+          <h1 className="text-base font-black tracking-widest text-foreground uppercase mt-1">
+            AJUSTES DEL SISTEMA
+          </h1>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider leading-relaxed">
+            Configuración global de apariencia, temas visuales y preferencias de interfaz de administración.
+          </p>
+        </div>
       </header>
 
       <div className="space-y-12 max-w-2xl">
@@ -48,7 +59,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4 text-left">
                   <div className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-                    theme === item.id ? "bg-brand text-black" : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+                    theme === item.id ? "bg-brand text-white" : "bg-muted text-muted-foreground group-hover:bg-muted/80"
                   )}>
                     <item.icon size={18} />
                   </div>
@@ -63,7 +74,7 @@ export default function SettingsPage() {
                 </div>
                 {theme === item.id && (
                   <div className="w-5 h-5 rounded-full bg-brand flex items-center justify-center shadow-[0_0_10px_rgba(184,115,51,0.3)]">
-                    <Check size={12} className="text-black" strokeWidth={3} />
+                    <Check size={12} className="text-white" strokeWidth={3} />
                   </div>
                 )}
               </button>
