@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     } = body;
 
     // Conexión con el esquema existente (Stops y Production)
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const production = await tx.production.create({
         data: {
           machineId: machineId, // UUID en el esquema existente

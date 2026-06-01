@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Database, 
-  Search, 
+import {
+  Database,
+  Search,
   RefreshCw,
   User,
   Clock,
@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface SystemLog {
   id: number;
@@ -52,7 +53,7 @@ export default function LogsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/logs", {
+      const res = await fetch(`${API_BASE_URL}/logs`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -110,7 +111,7 @@ export default function LogsPage() {
     try {
       const token = localStorage.getItem("curex_token");
       // Asumiendo que existe un endpoint de borrado de logs, si no lo ignoramos
-      const res = await fetch(`http://localhost:8000/api/logs/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/logs/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -136,9 +137,9 @@ export default function LogsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={fetchLogs}
             className="border-border hover:bg-muted font-bold text-[10px] uppercase tracking-widest"
           >
@@ -153,8 +154,8 @@ export default function LogsPage() {
         <CardContent className="p-4 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-            <Input 
-              placeholder="Filtrar por acción, usuario o descripción..." 
+            <Input
+              placeholder="Filtrar por acción, usuario o descripción..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-background border-border pl-10 h-11 rounded-xl font-bold text-sm"
@@ -247,8 +248,8 @@ export default function LogsPage() {
                           </p>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(log.id)}
                             className="h-8 w-8 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
@@ -278,7 +279,7 @@ export default function LogsPage() {
                 </Button>
 
                 <div className="flex flex-col items-center">
-                   <span className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">
+                  <span className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">
                     Página {currentPage} / {Math.ceil(filteredLogs.length / itemsPerPage)}
                   </span>
                 </div>

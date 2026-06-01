@@ -20,22 +20,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { API_BASE_URL } from "@/lib/api-config";
 
 const menuItems = [
   {
-    group: "OPERACIONES", items: [
+    items: [
       { name: "Panel de Control", href: "/admin", icon: LayoutDashboard },
-      { name: "Vista General", href: "/admin/general", icon: PieChart },
       { name: "Producción", href: "/admin/production", icon: ClipboardList },
-      { name: "Monitoreo", href: "/admin/monitoring", icon: Activity },
       { name: "Información Diaria", href: "/admin/informations", icon: Megaphone },
-    ]
-  },
-  {
-    group: "CONFIGURACIÓN", items: [
+      { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList },
       { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings },
     ]
-  }
+  },
 ];
 
 export function Sidebar() {
@@ -54,24 +50,24 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-72 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-white/[0.03] flex flex-col h-screen sticky top-0 z-50 overflow-hidden">
-      {/* Glow Decorativo (Solo en Oscuro) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-transparent pointer-events-none opacity-0 dark:opacity-100" />
+    <aside className="sidebar-dark-theme w-72 bg-zinc-950 border-r border-white/[0.03] flex flex-col h-screen sticky top-0 z-50 overflow-hidden">
+      {/* Glow Decorativo */}
+      <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-transparent pointer-events-none opacity-100" />
 
       {/* Area del Logo */}
       <div className="p-8 relative">
         <Link href="/admin/production" className="flex items-center gap-4 group">
           <div className="relative">
-            <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(184,115,51,0.25)] dark:shadow-[0_0_25px_rgba(184,115,51,0.4)] group-hover:scale-105 transition-all duration-500">
-              <ShieldCheck size={26} strokeWidth={2.5} />
+            <div className="w-11 h-11 bg-zinc-900/50 border border-zinc-800 rounded-xl flex items-center justify-center p-2 shadow-[0_0_15px_rgba(249,115,22,0.15)] group-hover:scale-105 transition-all duration-500">
+              <img src="/logo-curex.png" alt="Curex Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-zinc-950 rounded-full" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-zinc-950 rounded-full" />
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-tighter text-zinc-900 dark:text-white group-hover:text-brand transition-colors leading-none">
+            <h1 className="text-xl font-black tracking-tighter text-white group-hover:text-brand transition-colors leading-none">
               CUREX <span className="text-brand">ADMIN</span>
             </h1>
-            <p className="text-[7px] uppercase font-black tracking-[0.4em] text-zinc-400 dark:text-zinc-500 mt-1.5 flex items-center gap-1.5">
+            <p className="text-[7px] uppercase font-black tracking-[0.4em] text-zinc-500 mt-1.5 flex items-center gap-1.5">
               <Cpu size={8} /> SISTEMA CENTRAL v4.2
             </p>
           </div>
@@ -82,8 +78,8 @@ export function Sidebar() {
       <nav className="flex-1 px-4 py-2 space-y-10 overflow-y-auto overflow-x-hidden transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden relative">
         {menuItems.map((group) => (
           <div key={group.group} className="space-y-4">
-            <h2 className="px-4 text-[9px] font-black text-zinc-400 dark:text-zinc-600 tracking-[0.3em] flex items-center gap-2">
-              <div className="h-[1px] w-4 bg-zinc-100 dark:bg-zinc-800" />
+            <h2 className="px-4 text-[9px] font-black text-zinc-600 tracking-[0.3em] flex items-center gap-2">
+              <div className="h-[1px] w-4 bg-zinc-800" />
               {group.group}
             </h2>
             <div className="space-y-1.5">
@@ -98,7 +94,7 @@ export function Sidebar() {
                       "flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative overflow-hidden",
                       isActive
                         ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(184,115,51,0.03)]"
-                        : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/[0.02]"
+                        : "text-zinc-500 hover:text-white hover:bg-white/[0.02]"
                     )}
                   >
                     {isActive && (
@@ -107,7 +103,7 @@ export function Sidebar() {
 
                     <Icon size={18} className={cn(
                       "transition-all duration-300",
-                      isActive ? "text-brand scale-110 drop-shadow-[0_0_8px_rgba(184,115,51,0.3)]" : "group-hover:text-zinc-900 dark:group-hover:text-white"
+                      isActive ? "text-brand scale-110 drop-shadow-[0_0_8px_rgba(184,115,51,0.3)]" : "group-hover:text-white"
                     )} />
                     <span className="relative z-10">{item.name}</span>
                   </Link>
@@ -119,21 +115,21 @@ export function Sidebar() {
       </nav>
 
       {/* Footer de Usuario */}
-      <div className="p-5 border-t border-zinc-200 dark:border-white/[0.03] bg-white dark:bg-zinc-950">
+      <div className="p-5 border-t border-white/[0.03] bg-zinc-950">
         <div className="flex items-center justify-between gap-3 mb-2 px-1">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-white/[0.05] flex items-center justify-center text-brand overflow-hidden shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/[0.05] flex items-center justify-center text-brand overflow-hidden shadow-sm">
               {user ? <span className="font-black text-xs">{user.nombre[0]}{user.apellido[0]}</span> : <UserIcon size={16} />}
             </div>
             <div>
-              <p className="text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-tighter leading-none">
+              <p className="text-[10px] font-black text-white uppercase tracking-tighter leading-none">
                 {user ? `${user.nombre} ${user.apellido}` : "Operador_01"}
               </p>
-              <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] mt-1 block">Acceso Nivel 1</span>
+              <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mt-1 block">Acceso Nivel 1</span>
             </div>
           </div>
           <Link href="/">
-            <button className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
+            <button className="p-2 rounded-lg bg-zinc-900 border border-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
               <LogOut size={16} />
             </button>
           </Link>
@@ -149,7 +145,7 @@ function RecentLogs() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/logs?limit=4");
+      const res = await fetch(`${API_BASE_URL}/logs?limit=4`);
       const data = await res.json();
       if (Array.isArray(data)) setLogs(data);
     } catch (err) {

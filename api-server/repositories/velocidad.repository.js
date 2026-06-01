@@ -124,21 +124,35 @@ class VelocidadRepository {
     return resumen;
   }
 
-  async getBreakdownByMachine(fecha) {
-    const dateToQuery = fecha || new Date().toISOString().split('T')[0];
-    const [rows] = await pool.execute(`
+  async getBreakdownByMachine(fecha = null, mes = null) {
+    let sql = `
       SELECT 
-        v.maquina_id,
+        m.id as maquina_id,
         m.nombre as maquina_nombre,
-        ROUND(AVG(v.velocidad_real_mlmin), 1) as avg_real,
-        ROUND(AVG(v.velocidad_teorica_mlmin), 1) as avg_teorica,
-        ROUND(AVG(v.velocidad_real_mlmin / NULLIF(v.velocidad_teorica_mlmin, 0) * 100), 1) as rendimiento_pct
-      FROM velocidad v
-      JOIN maquinas m ON v.maquina_id = m.id
-      WHERE v.fecha = ?
-      GROUP BY v.maquina_id, m.nombre
+        ROUND(COALESCE(AVG(v.velocidad_real_mlmin), 0), 1) as avg_real,
+        ROUND(COALESCE(AVG(v.velocidad_teorica_mlmin), 0), 1) as avg_teorica,
+        ROUND(COALESCE(AVG(v.velocidad_real_mlmin / NULLIF(v.velocidad_teorica_mlmin, 0) * 100), 0), 1) as rendimiento_pct
+      FROM maquinas m
+      LEFT JOIN velocidad v ON m.id = v.maquina_id 
+    `;
+    
+    const params = [];
+    if (mes) {
+      sql += ' AND v.fecha LIKE ?';
+      params.push(`${mes}%`);
+    } else {
+      const dateToQuery = fecha || new Date().toISOString().split('T')[0];
+      sql += ' AND v.fecha = ?';
+      params.push(dateToQuery);
+    }
+
+    sql += `
+      WHERE m.empresa_id = 2
+      GROUP BY m.id, m.nombre
       ORDER BY rendimiento_pct DESC
-    `, [dateToQuery]);
+    `;
+
+    const [rows] = await pool.execute(sql, params);
     return rows;
   }
 }

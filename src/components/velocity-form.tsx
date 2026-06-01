@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export function VelocidadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +37,7 @@ export function VelocidadForm() {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/velocidad", {
+      const res = await fetch(`${API_BASE_URL}/velocidad`, {
         method: "POST",
         body: JSON.stringify(values),
         headers: {

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Award, Package, ChevronRight } from 'lucide-react';
 
-const COLORS = ['#f97316', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5'];
+const COLORS = ['var(--col-brand)', 'var(--col-warn)', 'var(--col-danger)', 'var(--col-info)', 'var(--col-text-muted)'];
 
 export default function SlideTopProducts({ data, isLoading }) {
   const produccion = data?.produccion ?? [];
@@ -34,32 +34,36 @@ export default function SlideTopProducts({ data, isLoading }) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="glass"
-              style={{ padding: '20px 24px', borderLeft: `4px solid ${color}` }}
+              className={i === 0 ? "glass-brand" : "glass"}
+              style={{ 
+                padding: '20px 24px', 
+                borderLeft: i === 0 ? 'none' : `4px solid ${color}`,
+                border: i === 0 ? 'none' : undefined
+              }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                  <span className="stat-number" style={{ fontSize: '24px', color: color, opacity: 0.8 }}>0{i + 1}</span>
+                  <span className="stat-number" style={{ fontSize: '24px', color: i === 0 ? 'white' : color, opacity: i === 0 ? 1 : 0.8 }}>0{i + 1}</span>
                   <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'white', letterSpacing: '0.02em' }}>{item.maquina_nombre}</h3>
-                    <p style={{ fontSize: '10px', color: 'var(--col-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: i === 0 ? 'white' : 'var(--col-text-primary)', letterSpacing: '0.02em' }}>{item.maquina_nombre}</h3>
+                    <p style={{ fontSize: '10px', color: i === 0 ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
                       EFICIENCIA: {Math.round(Number(item.eficiencia_promedio))}% | PARADAS: {Math.round(Number(item.total_minutos))} MIN
                     </p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p className="stat-number" style={{ fontSize: '24px', color: 'white' }}>
+                  <p className="stat-number" style={{ fontSize: '24px', color: i === 0 ? 'white' : 'var(--col-text-primary)' }}>
                     {Number(item.total_metros).toLocaleString()}
                   </p>
-                  <p style={{ fontSize: '9px', color: 'var(--col-text-muted)', fontWeight: 800 }}>METROS TOTALES</p>
+                  <p style={{ fontSize: '9px', color: i === 0 ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 800 }}>METROS TOTALES</p>
                 </div>
               </div>
-              <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+              <div style={{ width: '100%', height: 4, background: i === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
                   transition={{ duration: 1, ease: "easeOut", delay: i * 0.1 + 0.3 }}
-                  style={{ height: '100%', background: color, boxShadow: `0 0 10px ${color}66` }}
+                  style={{ height: '100%', background: i === 0 ? 'white' : color, boxShadow: i === 0 ? 'none' : `0 0 10px ${color}66` }}
                 />
               </div>
             </motion.li>
@@ -74,3 +78,4 @@ export default function SlideTopProducts({ data, isLoading }) {
     </div>
   );
 }
+

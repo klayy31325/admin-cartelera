@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { leerProduccionDesdeExcel } from "@/lib/excel-utils";
 import { toast } from "sonner";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export function ExcelImport() {
   const [isUploading, setIsUploading] = useState(false);
@@ -42,7 +43,7 @@ export function ExcelImport() {
       for (let i = 0; i < data.length; i++) {
         const item = data[i];
         try {
-          const res = await fetch("http://localhost:8000/api/produccion", {
+          const res = await fetch(`${API_BASE_URL}/produccion`, {
             method: "POST",
             body: JSON.stringify(item),
             headers: {

@@ -20,24 +20,14 @@ export default function SettingsPage() {
     <div className="space-y-10 max-w-4xl">
       {/* Header Estilo CUREX */}
       <header className="flex flex-col gap-4 border-b border-border pb-8">
-        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-          <Settings size={12} className="text-brand animate-spin-slow" />
-          System Configuration v1.0
-        </div>
-        <h1 className="text-4xl font-black tracking-tighter text-foreground">
-          SETTINGS <span className="text-brand">PANEL</span>
-        </h1>
-        <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">
-          Personaliza la experiencia visual y los parámetros del sistema
-        </p>
       </header>
 
       <div className="space-y-12 max-w-2xl">
         {/* SECCIÓN: APARIENCIA */}
         <section className="space-y-4">
           <div className="flex items-center gap-3 px-2">
-            <div className="h-[1px] w-4 bg-brand/30" />
-            <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Apariencia</h2>
+            <div className="h-[10px] w-4 bg-brand/30" />
+            <h2 className="text-[15px] font-black text-muted-foreground uppercase tracking-[0.4em]">Apariencia</h2>
           </div>
           
           <div className="space-y-1">
@@ -81,20 +71,8 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* NOTA DE TEMA AUTOMÁTICO */}
-        <section className="p-6 rounded-2xl bg-brand/5 border border-brand/10 border-dashed">
-          <div className="flex gap-4">
-             <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand shrink-0">
-               <ShieldCheck size={20} />
-             </div>
-             <div className="space-y-1">
-               <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Identidad Corporativa Protegida</h4>
-               <p className="text-[10px] text-muted-foreground uppercase leading-relaxed font-bold tracking-tight opacity-70">
-                 Los colores de la marca se configuran automáticamente según tu empresa registrada (CUREX o MORROCEL). No se requiere configuración manual.
-               </p>
-             </div>
-          </div>
-        </section>
+
+ 
       </div>
 
       {/* SEGURIDAD Y ESTADO */}
@@ -111,7 +89,7 @@ export default function SettingsPage() {
         </div>
 
         <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.3em]">
-          Settings protocol v1.4.2 // Core Sync
+          Settings protocol v1.0.0 // Core Sync
         </p>
       </footer>
     </div>

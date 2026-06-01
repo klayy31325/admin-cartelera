@@ -72,12 +72,80 @@ class ProduccionRepository {
     return rows[0] || null;
   }
 
-  async create(data) {
-    const { producto_id, maquina_id, metros_producidos, fecha, estado_id } = data;
+  async findOrCreateCliente(empresa_id, nombre) {
+    const nombreNorm = nombre.trim().toUpperCase();
+    const [rows] = await pool.execute(
+      'SELECT id FROM clientes WHERE UPPER(TRIM(nombre)) = ? AND empresa_id = ?',
+      [nombreNorm, empresa_id]
+    );
+    if (rows.length > 0) return rows[0].id;
+
     const [result] = await pool.execute(
-      `INSERT INTO trabajos (producto_id, maquina_id, metros_producidos, fecha, estado_id)
-       VALUES (?, ?, ?, ?, ?)`,
-      [producto_id, maquina_id, metros_producidos, fecha, estado_id || 1]
+      'INSERT INTO clientes (empresa_id, nombre) VALUES (?, ?)',
+      [empresa_id, nombre.trim()]
+    );
+    return result.insertId;
+  }
+
+  async findOrCreateProducto(cliente_id, nombre) {
+    const nombreNorm = nombre.trim().toUpperCase();
+    const [rows] = await pool.execute(
+      'SELECT id FROM productos WHERE UPPER(TRIM(nombre)) = ? AND cliente_id = ?',
+      [nombreNorm, cliente_id]
+    );
+    if (rows.length > 0) return rows[0].id;
+
+    const [result] = await pool.execute(
+      'INSERT INTO productos (cliente_id, nombre) VALUES (?, ?)',
+      [cliente_id, nombre.trim()]
+    );
+    return result.insertId;
+  }
+
+  async findOrCreateMaquina(empresa_id, nombre) {
+    const nombreNorm = nombre.trim().toUpperCase();
+    const [rows] = await pool.execute(
+      'SELECT id FROM maquinas WHERE UPPER(TRIM(nombre)) = ? AND empresa_id = ?',
+      [nombreNorm, empresa_id]
+    );
+    if (rows.length > 0) return rows[0].id;
+
+    const [result] = await pool.execute(
+      'INSERT INTO maquinas (empresa_id, nombre) VALUES (?, ?)',
+      [empresa_id, nombreNorm]
+    );
+    return result.insertId;
+  }
+
+  async findOrCreateEstado(nombre) {
+    const nombreNorm = nombre.trim().toUpperCase();
+    const [rows] = await pool.execute(
+      'SELECT id FROM estados_trabajo WHERE UPPER(TRIM(nombre)) = ?',
+      [nombreNorm]
+    );
+    if (rows.length > 0) return rows[0].id;
+
+    const [result] = await pool.execute(
+      'INSERT INTO estados_trabajo (nombre) VALUES (?)',
+      [nombreNorm]
+    );
+    return result.insertId;
+  }
+
+  async create(data) {
+    const { cliente_id, producto_id, maquina_id, metros_producidos, fecha, estado_id, numero_pedido } = data;
+    const [result] = await pool.execute(
+      `INSERT INTO trabajos (cliente_id, producto_id, maquina_id, metros_producidos, fecha, estado_id, numero_pedido)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        cliente_id,
+        producto_id,
+        maquina_id,
+        metros_producidos || 0,
+        fecha,
+        estado_id || 1,
+        numero_pedido || `MANUAL-${Date.now()}`
+      ]
     );
     return { id: result.insertId, ...data };
   }

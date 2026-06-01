@@ -32,18 +32,20 @@ class ProduccionService {
 
     const empresa_id = await this.getEmpresaId(empresaNombre);
 
-    // Usar el repositorio de trabajos para resolver IDs dinámicamente (Normalización 3FN)
-    const cliente_id = await trabajosRepository.findOrCreateCliente(empresa_id, data.cliente);
-    const producto_id = await trabajosRepository.findOrCreateProducto(cliente_id, data.producto);
-    const maquina_id = await trabajosRepository.findOrCreateMaquina(empresa_id, data.maquina_nombre);
-    const estado_id = await trabajosRepository.findOrCreateEstado(data.status_orden || 'PRODUCCION');
+    // Resolver IDs dinámicamente usando los nuevos métodos del repositorio de producción
+    const cliente_id = await produccionRepository.findOrCreateCliente(empresa_id, data.cliente);
+    const producto_id = await produccionRepository.findOrCreateProducto(cliente_id, data.producto);
+    const maquina_id = await produccionRepository.findOrCreateMaquina(empresa_id, data.maquina_nombre);
+    const estado_id = await produccionRepository.findOrCreateEstado(data.status_orden || 'PRODUCCION');
 
     const insertData = {
+      cliente_id,
       producto_id,
       maquina_id,
-      metros: data.metros,
+      metros_producidos: data.metros,
       fecha: data.fecha,
-      estado_id
+      estado_id,
+      numero_pedido: `MANUAL-${Date.now()}`
     };
 
     return await produccionRepository.create(insertData);
@@ -53,18 +55,20 @@ class ProduccionService {
     await this.getById(id);
     const empresa_id = await this.getEmpresaId(empresaNombre);
 
-    const cliente_id = await trabajosRepository.findOrCreateCliente(empresa_id, data.cliente);
-    const producto_id = await trabajosRepository.findOrCreateProducto(cliente_id, data.producto);
-    const maquina_id = await trabajosRepository.findOrCreateMaquina(empresa_id, data.maquina_nombre);
-    const estado_id = await trabajosRepository.findOrCreateEstado(data.status_orden || 'PRODUCCION');
+    const cliente_id = await produccionRepository.findOrCreateCliente(empresa_id, data.cliente);
+    const producto_id = await produccionRepository.findOrCreateProducto(cliente_id, data.producto);
+    const maquina_id = await produccionRepository.findOrCreateMaquina(empresa_id, data.maquina_nombre);
+    const estado_id = await produccionRepository.findOrCreateEstado(data.status_orden || 'PRODUCCION');
 
     await produccionRepository.delete(id);
     return await produccionRepository.create({
+      cliente_id,
       producto_id,
       maquina_id,
-      metros: data.metros,
+      metros_producidos: data.metros,
       fecha: data.fecha,
-      estado_id
+      estado_id,
+      numero_pedido: `MANUAL-${Date.now()}`
     });
   }
 

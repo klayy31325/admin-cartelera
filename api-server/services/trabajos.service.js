@@ -61,6 +61,34 @@ function excelSerialToDate(serial) {
   return date.toISOString().split('T')[0];
 }
 
+// Parsea solvente y tinta desde el comentario serializado de desperdicios
+function parseDesperdicioComentario(comentario) {
+  const result = { solvente: 0, tinta: 0 };
+  if (!comentario || typeof comentario !== 'string') return result;
+
+  // 1. Intentar formato de importación: "Film: 12.3 kg | m/l: 45 | Tinta consumida: 8.5 kg | Solvente: 4.2 lts"
+  const solventMatch1 = comentario.match(/Solvente:\s*([0-9.]+)/i);
+  if (solventMatch1) {
+    result.solvente = parseFloat(solventMatch1[1]) || 0;
+  }
+  const tintaMatch1 = comentario.match(/Tinta consumida:\s*([0-9.]+)/i);
+  if (tintaMatch1) {
+    result.tinta = parseFloat(tintaMatch1[1]) || 0;
+  }
+
+  // 2. Intentar formato manual: "Manual: Film 12.3kg, Tinta 8.5kg, m/l 45, Solvente 4.2lts"
+  if (!solventMatch1) {
+    const solventMatch2 = comentario.match(/Solvente\s*([0-9.]+)/i);
+    if (solventMatch2) result.solvente = parseFloat(solventMatch2[1]) || 0;
+  }
+  if (!tintaMatch1) {
+    const tintaMatch2 = comentario.match(/Tinta\s*([0-9.]+)/i);
+    if (tintaMatch2) result.tinta = parseFloat(tintaMatch2[1]) || 0;
+  }
+
+  return result;
+}
+
 const MAQUINA_IDS = { 'OLYMPIA': 1, 'NOVOFLEX': 2 };
 
 const STATUS_VALIDOS = [
@@ -236,7 +264,8 @@ class TrabajosService {
         const vel_real    = parseFloat(row[COL.VEL_REAL])    || null;
 
         // ── Desperdicio ──────────────────────────────────────────────
-        const desp_kg      = parseFloat(row[COL.DESP_KG])       || 0; // kg film desperdiciado
+        const desp_ml      = parseFloat(row[COL.DESP_ML])        || 0; // Metros lineales (m/l)
+        const desp_kg      = parseFloat(row[COL.DESP_KG])        || 0; // kg film desperdiciado
         const desp_tinta   = parseFloat(row[COL.TINTA_TOTAL_KG]) || 0; // consumo total tinta (Kg)
         const desp_solvente = parseFloat(row[COL.SOLVENTE_LTS])  || 0; // solvente (Lts)
 
@@ -258,7 +287,7 @@ class TrabajosService {
             ...trabajoData,
             paradas:    paradasMinutos.filter(p => p.minutos > 0),
             velocidad:  { teorica: vel_teorica, real: vel_real },
-            desperdicio: { kg_film: desp_kg, tinta_kg: desp_tinta, solvente_lts: desp_solvente },
+            desperdicio: { kg_film: desp_kg, ml_film: desp_ml, tinta_kg: desp_tinta, solvente_lts: desp_solvente },
           });
           continue;
         }
@@ -291,8 +320,8 @@ class TrabajosService {
           }
         }
 
-        // Desperdicio (kg film + tinta si hay datos)
-        if (desp_kg > 0 || desp_tinta > 0 || desp_solvente > 0) {
+        // Desperdicio (solo film y m/l)
+        if (desp_kg > 0 || desp_tinta > 0 || desp_solvente > 0 || desp_ml > 0) {
           const [r] = await pool.execute(
             `INSERT INTO desperdicios
               (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
@@ -300,9 +329,9 @@ class TrabajosService {
             [
               maquina_id,
               trabajo.id,
-              desp_kg + desp_tinta,  // kg total (film desperdiciado + tinta consumida)
-              desp_solvente,          // litros de solvente
-              `Film: ${desp_kg} kg | Tinta: ${desp_tinta} kg | Solvente: ${desp_solvente} lts`,
+              desp_kg,                // kg total (solo film desperdiciado, NO sumar tinta)
+              desp_ml,                // metros lineales de desperdicio (m/l)
+              `Film: ${desp_kg} kg | m/l: ${desp_ml} | Tinta consumida: ${desp_tinta} kg | Solvente: ${desp_solvente} lts`,
               fecha,
             ]
           );
@@ -353,7 +382,7 @@ class TrabajosService {
       // Bloque Eficiencia
       'Vel. Real (m/min)', 'Vel. Teórica (m/min)', '% Rendimiento',
       // Bloque Desperdicios
-      'Desperdicio Kg', 'Solvente (Lts)', 'Comentario Desperdicio',
+      'Desperdicio Kg', 'Desperdicio M/L', 'Tinta Consumida (Kg)', 'Solvente (Lts)', 'Comentario Desperdicio',
       // Bloque Paradas Detalladas
       'PREPARACION', 'PRE-PRENSA', 'COLORIMETRIA', 'CALIDAD', 'MANTENIMIENTO', 
       'LIMPIEZA MAQUINA', 'PLANIFICACION', 'LIMPIEZA PLANCHA', 'LIMPIEZA RODILLO', 
@@ -366,8 +395,11 @@ class TrabajosService {
     // 2. Mapear Datos
     const rows = trabajos.map(t => {
       // Calcular Rendimiento %
-      const rendimiento = t.velocidad?.teorica > 0 
-        ? ((t.velocidad.real / t.velocidad.teorica) * 100).toFixed(1) + '%' 
+      const velTeorica = t.velocidad?.velocidad_teorica_mlmin || t.velocidad?.teorica || 0;
+      const velReal = t.velocidad?.velocidad_real_mlmin || t.velocidad?.real || 0;
+
+      const rendimiento = velTeorica > 0 
+        ? ((velReal / velTeorica) * 100).toFixed(1) + '%' 
         : '0%';
 
       // Mapear paradas a sus columnas correspondientes
@@ -376,15 +408,22 @@ class TrabajosService {
         return p ? p.minutos : 0;
       });
 
+      // Extraer solvente y tinta consumida del comentario serializado
+      const despInfo = parseDesperdicioComentario(t.desperdicio?.comentario);
+
       return [
         // Identificación
         t.numero_pedido, t.maquina_nombre, t.fecha, t.cliente, t.producto, t.destino, t.status_orden,
         // Producción
         t.meta_kg, t.metros_producidos, t.tiempo_produccion_min, t.tiempo_parada_total_min, t.tiempo_total_min,
         // Eficiencia
-        t.velocidad?.real || 0, t.velocidad?.teorica || 0, rendimiento,
+        velReal || 0, velTeorica || 0, rendimiento,
         // Desperdicios
-        t.desperdicio?.cantidad_kg || 0, t.desperdicio?.cantidad_ml || 0, t.desperdicio?.comentario || '',
+        t.desperdicio?.cantidad_kg || 0,
+        t.desperdicio?.cantidad_ml || 0,
+        despInfo.tinta,
+        despInfo.solvente,
+        t.desperdicio?.comentario || '',
         // Paradas Detalladas (desplegadas)
         ...paradasCols,
         // Observaciones

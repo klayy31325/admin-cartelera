@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface CatalogItem {
   id: string | number;
@@ -77,7 +78,7 @@ export function ProductionForm() {
 
     async function fetchCatalogs() {
       try {
-        const res = await fetch("http://localhost:8000/api/catalogos", {
+        const res = await fetch(`${API_BASE_URL}/catalogos`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -100,7 +101,7 @@ export function ProductionForm() {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/produccion", {
+      const res = await fetch(`${API_BASE_URL}/produccion`, {
         method: "POST",
         body: JSON.stringify(values),
         headers: {

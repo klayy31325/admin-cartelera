@@ -8,6 +8,21 @@ const paradasRepository = require('../repositories/paradas.repository');
 const informacionRepository = require('../repositories/informacion.repository');
 const velocidadRepository = require('../repositories/velocidad.repository');
 const desperdiciosRepository = require('../repositories/desperdicios.repository');
+const produccionInformativaRepository = require('../repositories/produccion_informativa.repository');
+
+/**
+ * GET /api/public/maquinas
+ * Retorna lista de máquinas disponibles.
+ */
+router.get('/maquinas', async (req, res, next) => {
+  try {
+    const { pool } = require('../config/db');
+    const [rows] = await pool.execute('SELECT id, nombre FROM maquinas WHERE empresa_id = 2 ORDER BY nombre ASC');
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * GET /api/public/informacion
@@ -17,6 +32,25 @@ router.get('/informacion', async (req, res, next) => {
   try {
     const infos = await informacionRepository.findAllActive(2); // CUREX default
     res.json({ success: true, data: infos });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/public/produccion-informativa
+ * Retorna tareas de producción para la cartelera.
+ */
+router.get('/produccion-informativa', async (req, res, next) => {
+  try {
+    const { maquina_id } = req.query;
+    let data;
+    if (maquina_id) {
+      data = await produccionInformativaRepository.findByMaquina(Number(maquina_id), 2);
+    } else {
+      data = await produccionInformativaRepository.findAll(2);
+    }
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -78,6 +112,7 @@ router.get('/dashboard', async (req, res, next) => {
           paradas: paradasMes,
           velocidad: velMes,
           desperdicio: despMes,
+          breakdown_velocidad: await velocidadRepository.getBreakdownByMachine(null, month),
           breakdown_desperdicio: await desperdiciosRepository.getBreakdownByMachine(null, month)
         },
         lastSync: new Date().toISOString()

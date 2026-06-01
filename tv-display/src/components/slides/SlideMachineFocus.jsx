@@ -1,23 +1,24 @@
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
-  Legend, ResponsiveContainer, AreaChart, Area, ComposedChart 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, AreaChart, Area, ComposedChart
 } from 'recharts';
 import { Cpu, Zap, AlertTriangle, Activity } from 'lucide-react';
 
-function StatCard({ label, value, unit, color = 'primary' }) {
+function StatCard({ label, value, unit, color = 'primary', variant = 'glass' }) {
   const colors = {
     primary: 'var(--col-text-primary)',
     brand: 'var(--col-brand)',
     success: 'var(--col-success)',
     warn: 'var(--col-warn)',
-    danger: '#ef4444', // Red for low efficiency
+    danger: 'var(--col-danger)',
   };
+  const isBrand = variant === 'glass-brand';
   return (
-    <div className="glass" style={{ padding: '20px', flex: 1 }}>
-      <p style={{ fontSize: '10px', color: 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
+    <div className={variant} style={{ padding: '20px', flex: 1 }}>
+      <p style={{ fontSize: '10px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="stat-number" style={{ fontSize: '28px', color: colors[color] }}>{value}</span>
-        <span style={{ fontSize: '12px', color: 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
+        <span className="stat-number" style={{ fontSize: '28px', color: isBrand ? 'white' : colors[color] }}>{value}</span>
+        <span style={{ fontSize: '12px', color: isBrand ? 'rgba(255,255,255,0.7)' : 'var(--col-text-muted)', fontWeight: 600 }}>{unit}</span>
       </div>
     </div>
   );
@@ -25,13 +26,17 @@ function StatCard({ label, value, unit, color = 'primary' }) {
 
 export default function SlideMachineFocus({ data, velocity, maquina, maquina_id, isMonthly }) {
   const produccion = data?.produccion ?? [];
-  const paradas    = data?.paradas    ?? [];
-  const desperdicio = data?.desperdicio ?? { total_kg: 0 };
+  const paradas = data?.paradas ?? [];
 
   // Buscar la data específica de esta máquina si se nos pasó un ID (caso de rotación genérica)
-  const machineData = maquina_id 
+  const machineData = maquina_id
     ? produccion.find(p => Number(p.maquina_id) === Number(maquina_id))
     : produccion[0] || null;
+
+  // Filtrar desperdicio específico
+  const desperdicio = maquina_id && data?.breakdown_desperdicio
+    ? data.breakdown_desperdicio.find(m => Number(m.maquina_id) === Number(maquina_id)) || { total_kg: 0 }
+    : data?.desperdicio ?? { total_kg: 0 };
 
   // Filtrar paradas específicas de esta máquina
   const machineStops = maquina_id
@@ -54,25 +59,24 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
 
   return (
     <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr', gap: 20, height: '100%' }}>
-      
+
       {/* Header Info */}
       <div style={{ display: 'flex', gap: 16 }}>
         <div className="glass" style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', gap: 20, borderLeft: '4px solid var(--col-brand)' }}>
           <Cpu size={32} color="var(--col-brand)" />
           <div>
             <p style={{ fontSize: '10px', color: 'var(--col-text-muted)', fontWeight: 800 }}>UNIT IDENTIFIER</p>
-            <h2 style={{ fontSize: '24px', fontWeight: 900, color: 'white', letterSpacing: '0.05em' }}>{maquina}</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--col-text-primary)', letterSpacing: '0.05em' }}>{maquina}</h2>
           </div>
         </div>
-        <StatCard label={isMonthly ? "METROS MENSUALES" : "METROS PRODUCIDOS"} value={Number(machineData?.total_metros ?? 0).toLocaleString()} unit="m" color="brand" />
-        <StatCard label={isMonthly ? "EFICIENCIA" : "EFICIENCIA ACTUAL"} value={Math.round(efic)} unit="%" color={eficColor} />
+        <StatCard label={isMonthly ? "METROS MENSUALES" : "METROS PRODUCIDOS"} value={Number(machineData?.total_metros ?? 0).toLocaleString()} unit="m" color="brand" variant="glass-brand" />
         <StatCard label="TIEMPO PARADA" value={Math.round(totalMinutos)} unit="min" color="warn" />
         <StatCard label="DESPERDICIO" value={Number(desperdicio.total_kg).toFixed(1)} unit="kg" color="danger" />
       </div>
 
       {/* Main Content */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, minHeight: 0 }}>
-        
+
         {/* Performance Chart */}
         <section className="glass" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -88,14 +92,14 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
               <ComposedChart data={velocityData}>
                 <defs>
                   <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--col-brand)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--col-brand)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--col-brand)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--col-brand)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                 <XAxis dataKey="hora" axisLine={false} tickLine={false} tick={{ fill: 'var(--col-text-muted)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--col-text-muted)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ background: 'var(--col-surface-md)', border: '1px solid var(--col-border)', borderRadius: 2 }}
                   itemStyle={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
                 />
@@ -108,7 +112,7 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
 
         {/* Logs / Incidents & Jobs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          
+
           <section className="glass" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
             <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
               <AlertTriangle size={16} color="var(--col-warn)" />
@@ -120,11 +124,11 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
               {machineStops.length > 0 ? machineStops.map((stop, i) => (
                 <div key={i} style={{ borderLeft: '2px solid var(--col-warn)', paddingLeft: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'white' }}>{stop.motivo_nombre}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-primary)' }}>{stop.motivo_nombre}</span>
                     <span style={{ fontSize: '10px', color: 'var(--col-warn)', fontFamily: 'var(--font-mono)' }}>{stop.total_minutos} MIN</span>
                   </div>
                   <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-                    <div style={{ width: `${Math.min((stop.total_minutos/60)*100, 100)}%`, height: '100%', background: 'var(--col-warn)' }} />
+                    <div style={{ width: `${Math.min((stop.total_minutos / 60) * 100, 100)}%`, height: '100%', background: 'var(--col-warn)' }} />
                   </div>
                 </div>
               )) : (
@@ -144,7 +148,7 @@ export default function SlideMachineFocus({ data, velocity, maquina, maquina_id,
               {machineJobs.length > 0 ? machineJobs.map((t, i) => (
                 <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
                       {t.producto_nombre}
                     </span>
                     <span style={{ fontSize: '10px', color: 'var(--col-brand)', fontWeight: 700 }}>{Number(t.metros_producidos).toLocaleString()} m</span>

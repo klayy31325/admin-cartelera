@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export function StopsForm() {
   const [isMounted, setIsMounted] = useState(false);
@@ -67,7 +68,7 @@ export function StopsForm() {
       const fecha_fin = `${values.fecha} ${values.hora_fin}:00`;
 
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/paradas", {
+      const res = await fetch(`${API_BASE_URL}/paradas`, {
         method: "POST",
         body: JSON.stringify({
           ...values,

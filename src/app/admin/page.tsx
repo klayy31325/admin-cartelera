@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface TV {
   id: number;
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/tv", {
+      const res = await fetch(`${API_BASE_URL}/tv`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
   const fetchMachines = async () => {
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/catalogos", {
+      const res = await fetch(`${API_BASE_URL}/catalogos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -136,8 +137,8 @@ export default function AdminDashboard() {
     const token = localStorage.getItem("curex_token");
     const method = editingTv ? "PUT" : "POST";
     const url = editingTv 
-      ? `http://localhost:8000/api/tv/${editingTv.id}` 
-      : "http://localhost:8000/api/tv";
+      ? `${API_BASE_URL}/tv/${editingTv.id}` 
+      : `${API_BASE_URL}/tv`;
 
     try {
       const res = await fetch(url, {
@@ -177,7 +178,7 @@ export default function AdminDashboard() {
   const forceSync = async (tv: TV) => {
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch(`http://localhost:8000/api/tv/${tv.id}`, {
+      const res = await fetch(`${API_BASE_URL}/tv/${tv.id}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -200,7 +201,7 @@ export default function AdminDashboard() {
     if (!confirm("¿Estás seguro de eliminar este dispositivo?")) return;
     const token = localStorage.getItem("curex_token");
     try {
-      const res = await fetch(`http://localhost:8000/api/tv/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/tv/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
     const newStatus = tv.estado_conexion === 'online' ? 'offline' : 'online';
     const token = localStorage.getItem("curex_token");
     try {
-      const res = await fetch(`http://localhost:8000/api/tv/${tv.id}`, {
+      const res = await fetch(`${API_BASE_URL}/tv/${tv.id}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -374,7 +375,6 @@ export default function AdminDashboard() {
               Total: {tvs.length}
             </span>
           </div>
-          <span>Morrocel C.A - CUREX C.A // SISTEMA DE PRODUCCION v1.0.0</span>
         </footer>
       </div>
 
@@ -382,40 +382,40 @@ export default function AdminDashboard() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)} />
-          <Card className="relative w-full max-w-lg bg-zinc-950 border-white/10 p-8 shadow-2xl animate-in zoom-in duration-300 z-[301]">
+          <Card className="relative w-full max-w-[410px] bg-zinc-950 border-white/10 p-6 shadow-2xl animate-in zoom-in duration-300 z-[301]">
             <button 
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 text-zinc-500 hover:text-white"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div className="mb-6">
-              <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
+            <div className="mb-4">
+              <h2 className="text-xl font-black text-white tracking-tighter uppercase">
                 {editingTv ? "Editar" : "Registrar"} <span className="text-brand">Dispositivo</span>
               </h2>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Portal de Configuración de Terminal</p>
+              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">Portal de Configuración de Terminal</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 p-3 bg-white/5 border border-white/10 rounded-lg">
-                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Empresa Vinculada</label>
-                  <p className="text-xs font-black text-brand uppercase">{currentUser?.empresa_nombre || "Empresa Actual"}</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1 p-2.5 bg-white/5 border border-white/10 rounded-lg">
+                  <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-0.5">Empresa Vinculada</label>
+                  <p className="text-[10px] font-black text-brand uppercase">{currentUser?.empresa_nombre || "Empresa Actual"}</p>
                 </div>
-                <div className="space-y-2 p-3 bg-white/5 border border-white/10 rounded-lg">
-                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Depto. Operativo</label>
-                  <p className="text-xs font-black text-white uppercase">Producción</p>
+                <div className="space-y-1 p-2.5 bg-white/5 border border-white/10 rounded-lg">
+                  <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-0.5">Depto. Operativo</label>
+                  <p className="text-[10px] font-black text-white uppercase">Producción</p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Dirección IP</label>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dirección IP</label>
                 <div className="relative">
-                  <Wifi className="absolute left-3 top-3 text-zinc-600" size={18} />
+                  <Wifi className="absolute left-3 top-2.5 text-zinc-600" size={16} />
                   <Input 
                     required
-                    className="bg-white/5 border-white/10 pl-10 h-12 text-white font-mono"
+                    className="bg-white/5 border-white/10 pl-10 h-10 text-white font-mono text-xs"
                     placeholder="192.168.1.100"
                     value={formData.ip_address}
                     onChange={(e) => setFormData({...formData, ip_address: e.target.value})}
@@ -423,10 +423,10 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Estado</label>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Estado</label>
                 <select 
-                  className="w-full bg-zinc-900 border border-white/10 h-12 rounded-lg px-4 text-sm text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
+                  className="w-full bg-zinc-900 border border-white/10 h-10 rounded-lg px-4 text-xs text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
                   style={{ backgroundColor: '#18181b' }}
                   value={formData.estado_conexion}
                   onChange={(e) => setFormData({...formData, estado_conexion: e.target.value as any})}
@@ -437,10 +437,10 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Máquina Asignada (Opcional)</label>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Máquina Asignada (Opcional)</label>
                 <select 
-                  className="w-full bg-zinc-900 border border-white/10 h-12 rounded-lg px-4 text-sm text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
+                  className="w-full bg-zinc-900 border border-white/10 h-10 rounded-lg px-4 text-xs text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
                   style={{ backgroundColor: '#18181b' }} // Forzar fondo oscuro en select
                   value={formData.maquina_id}
                   onChange={(e) => setFormData({...formData, maquina_id: e.target.value})}
@@ -452,34 +452,34 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Información / Notas</label>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Información / Notas</label>
                 <textarea 
-                  className="w-full bg-white/5 border border-white/10 min-h-[80px] rounded-lg p-4 text-sm text-white focus:outline-none focus:border-brand/50"
+                  className="w-full bg-white/5 border border-white/10 min-h-[64px] rounded-lg p-3 text-xs text-white focus:outline-none focus:border-brand/50"
                   placeholder="Detalles adicionales sobre este terminal..."
                   value={formData.informacion}
                   onChange={(e) => setFormData({...formData, informacion: e.target.value})}
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 {editingTv && (
                   <Button 
                     type="button"
                     onClick={() => handleDelete(editingTv.id)}
                     variant="outline"
-                    className="border-red-500/20 text-red-500 hover:bg-red-500/10 h-14 rounded-xl flex-1 font-black uppercase tracking-widest"
+                    className="border-red-500/20 text-red-500 hover:bg-red-500/10 h-11 rounded-xl flex-1 font-black uppercase tracking-widest text-xs"
                   >
-                    <Trash2 size={18} className="mr-2" />
+                    <Trash2 size={16} className="mr-1.5" />
                     Eliminar
                   </Button>
                 )}
                 <Button 
                   type="submit"
-                  className="bg-brand hover:bg-brand-dark text-black font-black uppercase tracking-widest h-14 rounded-xl shadow-[0_0_20px_rgba(184,115,51,0.2)] flex-[2] transition-all"
+                  className="bg-brand hover:bg-brand-dark text-black font-black uppercase tracking-widest h-11 rounded-xl shadow-[0_0_20px_rgba(184,115,51,0.2)] flex-[2] transition-all text-xs"
                 >
-                  <Save size={18} className="mr-2" />
-                  {editingTv ? "Guardar Cambios" : "Vincular Terminal"}
+                  <Save size={16} className="mr-1.5" />
+                  {editingTv ? "Guardar" : "Vincular"}
                 </Button>
               </div>
             </form>
@@ -605,7 +605,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="relative aspect-video w-full border border-brand/30 rounded-xl bg-black/40 overflow-hidden group">
                   <iframe 
-                    src={`http://localhost:5173/?preview_uid=${selectedTv.uid}`}
+                    src={`http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5173/?preview_uid=${selectedTv.uid}`}
                     className="w-[1280px] h-[720px] border-none origin-top-left"
                     style={{ 
                       transform: 'scale(0.245)', // Ajustado para un panel de aprox 315px

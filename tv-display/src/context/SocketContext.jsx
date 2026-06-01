@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../config/api-config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = API_BASE_URL;
 
 /* ── Connection status enum ── */
 export const WS_STATUS = {
@@ -72,7 +73,7 @@ export function SocketProvider({ children }) {
     });
 
     /* ─ Domain events ─ */
-    const EVENTS = ['production-update', 'parada-update', 'velocidad-update', 'info-update'];
+    const EVENTS = ['production-update', 'parada-update', 'velocidad-update', 'info-update', 'produccion-info-update'];
     EVENTS.forEach(evt =>
       socket.on(evt, (data) => setLastEvent({ type: evt, data, ts: Date.now() }))
     );

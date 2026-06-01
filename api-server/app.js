@@ -23,6 +23,7 @@ const trabajosRoutes = require('./routes/trabajos.routes');
 const velocidadRoutes = require('./routes/velocidad.routes');
 const logsRoutes = require('./routes/logs.routes');
 const informacionRoutes = require('./routes/informacion.routes');
+const produccionInformativaRoutes = require('./routes/produccion_informativa.routes');
 
 const app        = express();
 const httpServer = http.createServer(app);
@@ -79,6 +80,7 @@ app.use('/api/trabajos', trabajosRoutes);
 app.use('/api/velocidad', velocidadRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/informacion', informacionRoutes);
+app.use('/api/produccion-informativa', produccionInformativaRoutes);
 
 // Ruta 404
 app.use((req, res) => {

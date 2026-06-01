@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface Machine {
   id: number;
@@ -56,7 +57,7 @@ export function WasteForm() {
   async function fetchMachines() {
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/catalogos", {
+      const res = await fetch(`${API_BASE_URL}/catalogos`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -74,7 +75,7 @@ export function WasteForm() {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("curex_token");
-      const res = await fetch("http://localhost:8000/api/desperdicios", {
+      const res = await fetch(`${API_BASE_URL}/desperdicios`, {
         method: "POST",
         body: JSON.stringify(values),
         headers: {

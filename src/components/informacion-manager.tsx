@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface Informacion {
   id: number;
@@ -50,7 +51,7 @@ export function InformacionManager() {
 
   const fetchInformaciones = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/informacion");
+      const res = await fetch(`${API_BASE_URL}/informacion`);
       const data = await res.json();
       const listado = data.success ? data.data : (Array.isArray(data) ? data : []);
       setInformaciones(listado);
@@ -91,8 +92,8 @@ export function InformacionManager() {
       };
 
       const url = editingId 
-        ? `http://localhost:8000/api/informacion/${editingId}`
-        : "http://localhost:8000/api/informacion";
+        ? `${API_BASE_URL}/informacion/${editingId}`
+        : `${API_BASE_URL}/informacion`;
       
       const method = editingId ? "PUT" : "POST";
 
@@ -127,7 +128,7 @@ export function InformacionManager() {
 
   const handleToggle = async (id: number, currentStatus: boolean) => {
     try {
-      await fetch(`http://localhost:8000/api/informacion/${id}`, {
+      await fetch(`${API_BASE_URL}/informacion/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ activo: !currentStatus }),
@@ -142,7 +143,7 @@ export function InformacionManager() {
   const handleDelete = async (id: number) => {
     if (!confirm("¿Eliminar este anuncio permanentemente?")) return;
     try {
-      await fetch(`http://localhost:8000/api/informacion/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/informacion/${id}`, { method: "DELETE" });
       toast.success("Eliminado");
       fetchInformaciones();
     } catch (error) {
@@ -161,7 +162,7 @@ export function InformacionManager() {
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-16">
       {/* Header Industrial */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white dark:bg-zinc-950 p-10 rounded-[3rem] border border-zinc-200 dark:border-white/[0.05] shadow-2xl relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white dark:bg-zinc-950 p-10 rounded-2xl border border-zinc-200 dark:border-white/[0.05] shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
         
         <div className="flex items-center gap-6 relative z-10">
@@ -177,7 +178,7 @@ export function InformacionManager() {
         <Button 
           onClick={() => isAdding ? resetForm() : setIsAdding(true)}
           className={cn(
-            "h-16 px-10 rounded-2xl font-black uppercase tracking-[0.2em] transition-all relative z-10",
+            "h-16 px-10 rounded-xl font-black uppercase tracking-[0.2em] transition-all relative z-10",
             isAdding ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500" : "bg-brand text-black hover:scale-105 shadow-xl shadow-brand/20"
           )}
         >
@@ -187,7 +188,7 @@ export function InformacionManager() {
 
       {/* Formulario Maestro */}
       {isAdding && (
-        <Card className="p-10 bg-white dark:bg-zinc-900/40 border-2 border-brand/20 rounded-[3rem] shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+        <Card className="p-10 bg-white dark:bg-zinc-900/40 border-2 border-brand/20 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-500">
           <form onSubmit={handleSubmit} className="space-y-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               {/* Contenido */}
@@ -198,7 +199,7 @@ export function InformacionManager() {
                     placeholder="Escriba un título impactante..."
                     value={formData.titulo}
                     onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                    className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/[0.05] h-16 rounded-2xl text-lg font-bold"
+                    className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/[0.05] h-16 rounded-xl text-lg font-bold"
                   />
                 </div>
                 <div className="space-y-3">
@@ -207,13 +208,13 @@ export function InformacionManager() {
                     placeholder="Detalle el aviso aquí..."
                     value={formData.contenido}
                     onChange={(e) => setFormData({ ...formData, contenido: e.target.value })}
-                    className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/[0.05] rounded-3xl text-base font-medium min-h-[160px] p-6"
+                    className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/[0.05] rounded-xl text-base font-medium min-h-[160px] p-6"
                   />
                 </div>
               </div>
 
               {/* Configuración de Prioridad y Fechas */}
-              <div className="space-y-8 bg-zinc-50/50 dark:bg-white/[0.02] p-8 rounded-[2.5rem] border border-zinc-200/50 dark:border-white/[0.03]">
+              <div className="space-y-8 bg-zinc-50/50 dark:bg-white/[0.02] p-8 rounded-2xl border border-zinc-200/50 dark:border-white/[0.03]">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                     <ArrowUpCircle size={14} className="text-brand" /> Prioridad de Visualización
@@ -225,7 +226,7 @@ export function InformacionManager() {
                         type="button"
                         onClick={() => setFormData({ ...formData, prioridad: p as any })}
                         className={cn(
-                          "h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                          "h-14 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                           formData.prioridad === p 
                             ? "bg-brand text-black border-brand shadow-lg shadow-brand/20" 
                             : "bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] text-zinc-400 hover:border-brand/30"
@@ -246,7 +247,7 @@ export function InformacionManager() {
                       type="date"
                       value={formData.fecha_publicacion}
                       onChange={(e) => setFormData({ ...formData, fecha_publicacion: e.target.value })}
-                      className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-14 rounded-2xl font-bold"
+                      className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-14 rounded-xl font-bold"
                     />
                   </div>
                   <div className="space-y-3">
@@ -257,7 +258,7 @@ export function InformacionManager() {
                       type="date"
                       value={formData.fecha_expiracion}
                       onChange={(e) => setFormData({ ...formData, fecha_expiracion: e.target.value })}
-                      className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-14 rounded-2xl font-bold text-red-500/80"
+                      className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-14 rounded-xl font-bold text-red-500/80"
                     />
                   </div>
                 </div>
@@ -265,7 +266,7 @@ export function InformacionManager() {
             </div>
             
             <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-brand text-black font-black px-20 h-20 rounded-3xl uppercase tracking-[0.3em] text-lg hover:scale-105 transition-all shadow-2xl shadow-brand/30">
+              <Button type="submit" className="bg-brand text-black font-black px-20 h-20 rounded-xl uppercase tracking-[0.3em] text-lg hover:scale-105 transition-all shadow-2xl shadow-brand/30">
                 {editingId ? "Actualizar Registro" : "Publicar Aviso"}
               </Button>
             </div>
@@ -282,7 +283,7 @@ export function InformacionManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {informaciones.length === 0 ? (
-            <div className="col-span-full py-32 text-center space-y-6 bg-zinc-50/50 dark:bg-zinc-900/10 border-4 border-dashed border-zinc-100 dark:border-white/[0.02] rounded-[4rem]">
+            <div className="col-span-full py-32 text-center space-y-6 bg-zinc-50/50 dark:bg-zinc-900/10 border-4 border-dashed border-zinc-100 dark:border-white/[0.02] rounded-2xl">
                <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto">
                  <Info size={32} className="text-zinc-300 dark:text-zinc-600" />
                </div>
@@ -291,7 +292,7 @@ export function InformacionManager() {
           ) : (
             informaciones.map((info) => (
               <Card key={info.id} className={cn(
-                "group relative overflow-hidden p-10 rounded-[3.5rem] border-2 transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col h-full",
+                "group relative overflow-hidden p-10 rounded-2xl border-2 transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col h-full",
                 info.activo 
                   ? "bg-white dark:bg-zinc-900/40 border-zinc-100 dark:border-white/[0.03]" 
                   : "bg-zinc-50/50 dark:bg-black/40 border-transparent opacity-60 grayscale-[0.8]"
@@ -345,7 +346,7 @@ export function InformacionManager() {
                     size="sm"
                     onClick={() => handleToggle(info.id, info.activo)}
                     className={cn(
-                      "flex-1 h-12 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all",
+                      "flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all",
                       info.activo ? "hover:bg-amber-500/10 hover:text-amber-500 border-transparent hover:border-amber-500/30" : "hover:bg-green-500/10 hover:text-green-500 border-transparent hover:border-green-500/30"
                     )}
                   >
@@ -355,7 +356,7 @@ export function InformacionManager() {
                     variant="ghost" 
                     size="icon"
                     onClick={() => handleEdit(info)}
-                    className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10 border border-transparent hover:border-brand/30"
+                    className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10 border border-transparent hover:border-brand/30"
                   >
                     <Edit2 size={18} />
                   </Button>
@@ -363,7 +364,7 @@ export function InformacionManager() {
                     variant="ghost" 
                     size="icon"
                     onClick={() => handleDelete(info.id)}
-                    className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/30"
+                    className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/30"
                   >
                     <Trash2 size={18} />
                   </Button>

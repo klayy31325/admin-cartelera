@@ -4,6 +4,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SocketProvider } from './context/SocketContext';
 import Dashboard from './components/Dashboard';
 import './index.css';
+import { registerSW } from 'virtual:pwa-register';
+
+// Registrar PWA Service Worker
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('Hay una nueva versión disponible. ¿Recargar?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline');
+  },
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

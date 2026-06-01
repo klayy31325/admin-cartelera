@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/api-config";
 import Image from "next/image";
 import { Lock, User, Terminal as TerminalIcon, Loader2, Mail, Building, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function LoginPage() {
     try {
       if (isLoginView) {
         // Lógica de Login
-        const res = await fetch("http://localhost:8000/api/auth/login", {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -71,7 +72,7 @@ export default function LoginPage() {
 
       } else {
         // Lógica de Registro
-        const res = await fetch("http://localhost:8000/api/usuarios", {
+        const res = await fetch(`${API_BASE_URL}/usuarios`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),

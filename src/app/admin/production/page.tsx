@@ -5,14 +5,17 @@ import { ExcelImportForm } from "@/components/excel-import-form";
 import { TrabajoForm } from "@/components/trabajo-form";
 import { VelocidadForm } from "@/components/velocity-form";
 import { WasteForm } from "@/components/waste-form";
+import { ProductionList } from "@/components/production-list";
 import {
   Activity, ShieldAlert, FileSpreadsheet,
   ClipboardList, Zap, Trash2, Download
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api-config";
 
 const TABS = [
-  { id: "import",    label: "Importar Excel",  icon: FileSpreadsheet },
-  { id: "trabajo",   label: "Carga Manual (Aux)",  icon: ClipboardList },
+  { id: "import", label: "Importar Excel", icon: FileSpreadsheet },
+  { id: "list", label: "Bitácora Producción", icon: Activity },
+  { id: "trabajo", label: "Carga Manual (Aux)", icon: ClipboardList },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -22,7 +25,7 @@ export default function ProductionPage() {
 
   function handleExport() {
     const token = localStorage.getItem("curex_token");
-    window.open(`http://localhost:8000/api/trabajos/export?token=${token}`, "_blank");
+    window.open(`${API_BASE_URL}/trabajos/export?token=${token}`, "_blank");
   }
 
   return (
@@ -32,26 +35,21 @@ export default function ProductionPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
             <Activity size={12} className="text-brand" />
-            Location: Central Hub — Sector Alpha
           </div>
-          <h1 className="text-3xl font-black tracking-tighter text-white">
-            PRODUCTION <span className="text-brand">TERMINAL</span>
-          </h1>
+
         </div>
 
         <div className="flex items-center gap-3">
           {/* Export Button */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-brand/40 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-300 hover:text-brand transition-all"
+            className="flex items-center gap-2 px-6 py-2 bg-zinc-100 hover:bg-zinc-500 border border-zinc-700 hover:border-brand/40 rounded-xl text-[15px] font-black uppercase tracking-widest text-zinc-900 hover:text-brand transition-all"
           >
-            <Download size={14} />
-            Exportar Datos
+            <Download size={20} />
           </button>
 
-          <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
+          <div className="px-5 py-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">System Ready</span>
           </div>
         </div>
       </header>
@@ -84,6 +82,7 @@ export default function ProductionPage() {
       {/* Tab Content */}
       <section className="animate-in fade-in slide-in-from-bottom-3 duration-500">
         {activeTab === "import" && <ExcelImportForm />}
+        {activeTab === "list" && <ProductionList />}
         {activeTab === "trabajo" && (
           <div className="space-y-4">
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">

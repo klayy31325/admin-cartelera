@@ -152,15 +152,15 @@ class TrabajosRepository {
       }
 
       // 3. Insertar Desperdicio (si viene)
-      if (desperdicioData && (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0)) {
+      if (desperdicioData && (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0)) {
         await conn.execute(
           `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [
             data.maquina_id, trabajo_id, 
-            (desperdicioData.kg_film || 0) + (desperdicioData.tinta_kg || 0),
-            desperdicioData.solvente_lts || 0,
-            `Manual: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg`,
+            desperdicioData.kg_film || 0,
+            desperdicioData.ml_film || 0,
+            `Manual: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
             data.fecha
           ]
         );
@@ -371,15 +371,15 @@ class TrabajosRepository {
       // Desperdicio: Limpiar y re-insertar
       if (desperdicioData) {
         await conn.execute('DELETE FROM desperdicios WHERE trabajo_id = ?', [id]);
-        if (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0) {
+        if (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0) {
           await conn.execute(
             `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
              VALUES (?, ?, ?, ?, ?, ?)`,
             [
               data.maquina_id, id, 
-              (desperdicioData.kg_film || 0) + (desperdicioData.tinta_kg || 0),
-              desperdicioData.solvente_lts || 0,
-              `Manual Update: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg`,
+              desperdicioData.kg_film || 0,
+              desperdicioData.ml_film || 0,
+              `Manual Update: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
               data.fecha
             ]
           );

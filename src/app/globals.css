@@ -6,7 +6,6 @@
   :root {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -25,16 +24,12 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
-    --radius: 1rem;
+    --radius: 0.25rem;
   }
 
   .light {
-    --background: 240 4.8% 95.9%; /* zinc-50 */
+    --background: 240 5.9% 90%;  /* zinc-100: beautiful cool grayish background */
     --foreground: 0 0% 0%;       /* Pure Black */
-
-
-
-
 
     --card: 0 0% 100% / 1.0;     /* Solid White for high contrast */
     --card-foreground: 0 0% 0%;
@@ -50,18 +45,14 @@
     --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 0% / 0.1;     /* Subtle black border */
-    --input: 0 0% 0% / 0.1;
+    --border: 0 0% 0% / 0.15;    /* Slightly more defined border */
+    --input: 0 0% 0% / 0.15;
     --ring: 24.6 95% 53.1%;
   }
 
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-
-
-
-
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -81,6 +72,7 @@
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
   }
+
   .theme-morrocel {
     --brand: 22 52% 39%;
     --brand-light: 22 52% 45%;
@@ -102,5 +94,96 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Force light gray, slate, zinc, and neutral texts to be pure black or very dark grey in light mode for maximum legibility */
+.light {
+  .text-zinc-300,
+  .text-zinc-400,
+  .text-zinc-500,
+  .text-gray-300,
+  .text-gray-400,
+  .text-gray-500,
+  .text-slate-300,
+  .text-slate-400,
+  .text-slate-500,
+  .text-neutral-300,
+  .text-neutral-400,
+  .text-neutral-500 {
+    color: #4b5563 !important; /* gray-600: strong legible medium-dark gray for perfect hierarchy */
+  }
+
+  .text-zinc-600,
+  .text-zinc-700,
+  .text-zinc-800,
+  .text-gray-600,
+  .text-gray-700,
+  .text-gray-800,
+  .text-slate-600,
+  .text-slate-700,
+  .text-slate-800,
+  .text-neutral-600,
+  .text-neutral-700,
+  .text-neutral-800,
+  .text-muted-foreground {
+    color: #111827 !important; /* gray-900: extremely dark, high contrast */
+  }
+
+  /* Fixes for dark elements on light backgrounds inside white cards */
+  .hover\:bg-white\/5:hover {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  .hover\:text-white:hover {
+    color: #000000 !important;
+  }
+
+  /* Ensure the sidebar remains dark even in light mode by overriding the light mode resets */
+  .sidebar-dark-theme {
+    background-color: #09090b !important; /* zinc-950 background */
+    border-right-color: rgba(255, 255, 255, 0.03) !important;
+
+    .text-zinc-300,
+    .text-zinc-400,
+    .text-zinc-500,
+    .text-gray-300,
+    .text-gray-400,
+    .text-gray-500,
+    .text-slate-300,
+    .text-slate-400,
+    .text-slate-500,
+    .text-neutral-300,
+    .text-neutral-400,
+    .text-neutral-500 {
+      color: #71717a !important; /* zinc-500: beautiful soft gray for dark sidebar text */
+    }
+
+    .text-zinc-600,
+    .text-zinc-700,
+    .text-zinc-800,
+    .text-zinc-900,
+    .text-gray-600,
+    .text-gray-700,
+    .text-gray-800,
+    .text-slate-600,
+    .text-slate-700,
+    .text-slate-800,
+    .text-neutral-600,
+    .text-neutral-700,
+    .text-neutral-800,
+    .text-white,
+    .text-muted-foreground {
+      color: #f4f4f5 !important; /* zinc-100: legible white headings and primary text */
+    }
+
+    /* Override hover states inside the dark sidebar */
+    .hover\:text-white:hover {
+      color: #ffffff !important;
+    }
+
+    .hover\:bg-white\/\[0\.02\]:hover {
+      background-color: rgba(255, 255, 255, 0.02) !important;
+    }
   }
 }
