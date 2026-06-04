@@ -119,14 +119,17 @@ class TrabajosRepository {
       const [result] = await conn.execute(
         `INSERT INTO trabajos
           (maquina_id, cliente_id, producto_id, destino_id, estado_id,
-           numero_pedido, fecha, meta_kg, metros_producidos,
-           tiempo_produccion_min, tiempo_parada_total_min, tiempo_total_min, observaciones)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           numero_pedido, fecha, meta_kg, produccion_kg, metros_producidos,
+           tiempo_produccion_min, tiempo_parada_total_min, tiempo_total_min,
+           parada_limpieza_min, parada_pruebas_min, parada_insumo_min, observaciones)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.maquina_id, cliente_id, producto_id, destino_id, estado_id,
           data.numero_pedido, data.fecha, data.meta_kg || 0,
-          data.metros_producidos || 0, data.tiempo_produccion_min || 0,
+          data.produccion_kg || null, data.metros_producidos || 0,
+          data.tiempo_produccion_min || 0,
           data.tiempo_parada_total_min || 0, data.tiempo_total_min || 0,
+          data.parada_limpieza_min || 0, data.parada_pruebas_min || 0, data.parada_insumo_min || 0,
           data.observaciones || null,
         ]
       );
@@ -152,14 +155,15 @@ class TrabajosRepository {
       }
 
       // 3. Insertar Desperdicio (si viene)
-      if (desperdicioData && (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0)) {
+      if (desperdicioData && (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0 || desperdicioData.porcentaje_kg != null)) {
         await conn.execute(
-          `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             data.maquina_id, trabajo_id, 
             desperdicioData.kg_film || 0,
             desperdicioData.ml_film || 0,
+            desperdicioData.porcentaje_kg || null,
             `Manual: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
             data.fecha
           ]
@@ -333,19 +337,37 @@ class TrabajosRepository {
       const destino_id  = await getDestinoId(conn, data.destino || 'LAMINACION');
       const estado_id   = await getEstadoId(conn, data.status_orden || 'PROCESO');
 
+      // Construir SET dinámico: solo incluir paradas si vienen en data
+      const setCols = [
+        'maquina_id=?', 'cliente_id=?', 'producto_id=?', 'destino_id=?', 'estado_id=?',
+        'numero_pedido=?', 'fecha=?', 'meta_kg=?', 'produccion_kg=?', 'metros_producidos=?',
+        'tiempo_produccion_min=?', 'tiempo_parada_total_min=?', 'tiempo_total_min=?',
+      ];
+      const setVals = [
+        data.maquina_id, cliente_id, producto_id, destino_id, estado_id,
+        data.numero_pedido, data.fecha, data.meta_kg, data.produccion_kg || null,
+        data.metros_producidos,
+        data.tiempo_produccion_min, data.tiempo_parada_total_min, data.tiempo_total_min,
+      ];
+      if ('parada_limpieza_min' in data) {
+        setCols.push('parada_limpieza_min=?');
+        setVals.push(data.parada_limpieza_min || 0);
+      }
+      if ('parada_pruebas_min' in data) {
+        setCols.push('parada_pruebas_min=?');
+        setVals.push(data.parada_pruebas_min || 0);
+      }
+      if ('parada_insumo_min' in data) {
+        setCols.push('parada_insumo_min=?');
+        setVals.push(data.parada_insumo_min || 0);
+      }
+      setCols.push('observaciones=?');
+      setVals.push(data.observaciones);
+      setVals.push(id);
+
       await conn.execute(
-        `UPDATE trabajos SET
-          maquina_id=?, cliente_id=?, producto_id=?, destino_id=?, estado_id=?,
-          numero_pedido=?, fecha=?, meta_kg=?, metros_producidos=?,
-          tiempo_produccion_min=?, tiempo_parada_total_min=?, tiempo_total_min=?,
-          observaciones=?
-         WHERE id=?`,
-        [
-          data.maquina_id, cliente_id, producto_id, destino_id, estado_id,
-          data.numero_pedido, data.fecha, data.meta_kg, data.metros_producidos,
-          data.tiempo_produccion_min, data.tiempo_parada_total_min,
-          data.tiempo_total_min, data.observaciones, id
-        ]
+        `UPDATE trabajos SET ${setCols.join(', ')} WHERE id=?`,
+        setVals
       );
 
       // Paradas: Limpiar y re-insertar
@@ -371,14 +393,15 @@ class TrabajosRepository {
       // Desperdicio: Limpiar y re-insertar
       if (desperdicioData) {
         await conn.execute('DELETE FROM desperdicios WHERE trabajo_id = ?', [id]);
-        if (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0) {
+        if (desperdicioData.kg_film > 0 || desperdicioData.tinta_kg > 0 || desperdicioData.ml_film > 0 || desperdicioData.porcentaje_kg != null) {
           await conn.execute(
-            `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
               data.maquina_id, id, 
               desperdicioData.kg_film || 0,
               desperdicioData.ml_film || 0,
+              desperdicioData.porcentaje_kg || null,
               `Manual Update: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
               data.fecha
             ]

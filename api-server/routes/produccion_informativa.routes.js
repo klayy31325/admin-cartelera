@@ -23,6 +23,17 @@ router.get('/empresa/:empresa_id', async (req, res) => {
   }
 });
 
+// Obtener el siguiente número de orden disponible
+router.get('/next-orden', async (req, res) => {
+  try {
+    const empresa_id = req.query.empresa_id || 2;
+    const maxOrden = await produccionInformativaRepository.getMaxOrden(Number(empresa_id));
+    res.json({ success: true, data: { nextOrden: maxOrden + 1 } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Crear nuevo registro
 router.post('/', async (req, res) => {
   try {
@@ -34,7 +45,8 @@ router.post('/', async (req, res) => {
       getIO().emit('produccion-info-update', newItem);
     } catch (_) {}
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    const status = err.message.startsWith('El orden') ? 400 : 500;
+    res.status(status).json({ success: false, error: err.message });
   }
 });
 
@@ -49,7 +61,8 @@ router.put('/:id', async (req, res) => {
       getIO().emit('produccion-info-update', updated);
     } catch (_) {}
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    const status = err.message.startsWith('El orden') ? 400 : 500;
+    res.status(status).json({ success: false, error: err.message });
   }
 });
 

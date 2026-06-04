@@ -26,10 +26,8 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
   const sortedItems = [...todayItems].sort((a, b) => {
     if (a.estado === 'completado' && b.estado !== 'completado') return 1;
     if (a.estado !== 'completado' && b.estado === 'completado') return -1;
-    // Criterio secundario: Prioridad alta primero
-    if (a.prioridad === 'alta' && b.prioridad !== 'alta') return -1;
-    if (a.prioridad !== 'alta' && b.prioridad === 'alta') return 1;
-    return 0;
+    // Criterio secundario: Orden numérico (ascendente)
+    return (a.orden || 0) - (b.orden || 0);
   });
 
   // 3. Dividir las tareas en páginas de máximo 4 items cada una (columna única)
@@ -165,20 +163,23 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
               gap: 10,
             }}
           >
-            {currentItems.map((item, idx) => {
-              // Calcular el índice real global para mostrar el orden numérico correcto
-              const globalIndex = currentPage * PAGE_SIZE + idx;
-              const isCardFocused = isFocused && idx === activeFocusIdx;
-              return (
-                <TaskCard 
-                  key={item.id} 
-                  item={item} 
-                  index={globalIndex} 
-                  isFocused={isCardFocused}
-                  onStatusClick={(e) => handleStatusToggle(item, e)} 
-                />
-              );
-            })}
+            {(() => {
+              const firstActiveId = sortedItems.find(it => it.estado !== 'completado')?.id;
+              return currentItems.map((item, idx) => {
+                const globalIndex = currentPage * PAGE_SIZE + idx;
+                const isCardFocused = isFocused && idx === activeFocusIdx;
+                return (
+                  <TaskCard
+                    key={item.id}
+                    item={item}
+                    index={globalIndex}
+                    isFocused={isCardFocused}
+                    isFirstActive={item.id === firstActiveId}
+                    onStatusClick={(e) => handleStatusToggle(item, e)}
+                  />
+                );
+              });
+            })()}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -211,11 +212,9 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
   );
 };
 
-const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
-  const isHighPriority = item.prioridad === 'alta';
+const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
   const isCompletado = item.estado === 'completado';
 
-  const onOrange = isHighPriority && !isCompletado;
   const formattedFecha = (() => {
     if (!item.fecha_asignada) return 'SIN FECHA';
     const rawDate = String(item.fecha_asignada).split('T')[0];
@@ -226,24 +225,23 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
 
   return (
     <div
-      className={onOrange ? 'tv-priority-high' : undefined}
       style={{
         background: isCompletado
           ? 'rgba(255,255,255,0.015)'
-          : isHighPriority
-            ? 'var(--col-brand)'
+          : isFirstActive
+            ? 'linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,140,0,0.05))'
             : 'var(--col-surface-md)',
         padding: '10px 18px',
         borderRadius: 12,
         border: isFocused
           ? '2px solid var(--col-brand)'
-          : onOrange
-            ? 'none'
+          : isFirstActive
+            ? '1px solid rgba(255,165,0,0.35)'
             : '1px solid var(--col-border)',
         boxShadow: isFocused
           ? '0 0 20px var(--col-brand-glow)'
-          : onOrange
-            ? '0 4px 14px rgba(249, 115, 22, 0.25)'
+          : isFirstActive
+            ? '0 0 12px rgba(255,165,0,0.15)'
             : '0 2px 12px rgba(0, 0, 0, 0.05)',
         display: 'flex',
         alignItems: 'center',
@@ -270,7 +268,7 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
           borderRadius: 6,
 
           zIndex: 2,
-          color: onOrange ? '#ffffff' : 'var(--col-text-muted)',
+          color: 'var(--col-text-muted)',
         }}
         title={`Fecha asignada: ${formattedFecha}`}
       >
@@ -278,69 +276,32 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
       </div>
 
       <div
-        className={onOrange ? 'tv-priority-high__icon-box' : undefined}
         style={{
           width: 32,
           height: 32,
           borderRadius: 8,
-          background: onOrange ? undefined : 'var(--col-gauge-track)',
+          background: isFirstActive
+            ? 'rgba(255,165,0,0.2)'
+            : 'var(--col-gauge-track)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '13px',
           fontWeight: 900,
-          color: onOrange ? undefined : 'var(--col-brand)',
+          color: isFirstActive ? '#ff8c00' : 'var(--col-brand)',
           flexShrink: 0,
         }}
       >
-        {index + 1}
+        {item.orden || '-'}
       </div>
 
       {/* Tarea Principal */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span
-            className={onOrange ? 'tv-priority-high__chip' : undefined}
-            style={{
-              fontSize: '8px',
-              fontWeight: 900,
-              padding: '2px 6px',
-              borderRadius: '4px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              display: 'inline-block',
-              background: onOrange
-                ? undefined
-                : item.prioridad === 'alta'
-                  ? 'rgba(239, 68, 68, 0.15)'
-                  : item.prioridad === 'media'
-                    ? 'rgba(245, 158, 11, 0.15)'
-                    : 'rgba(59, 130, 246, 0.15)',
-              color: onOrange
-                ? undefined
-                : item.prioridad === 'alta'
-                  ? '#ef4444'
-                  : item.prioridad === 'media'
-                    ? '#f59e0b'
-                    : '#3b82f6',
-              border: onOrange
-                ? undefined
-                : item.prioridad === 'alta'
-                  ? '1px solid rgba(239, 68, 68, 0.3)'
-                  : item.prioridad === 'media'
-                    ? '1px solid rgba(245, 158, 11, 0.3)'
-                    : '1px solid rgba(59, 130, 246, 0.3)',
-            }}
-          >
-            Prioridad: {item.prioridad || 'baja'}
-          </span>
-        </div>
         <h3
-          className={onOrange ? 'tv-priority-high__title' : undefined}
           style={{
             fontSize: item.tarea.length > 100 ? '11px' : item.tarea.length > 50 ? '12px' : '13px',
             fontWeight: 900,
-            color: onOrange ? undefined : 'var(--col-text-primary)',
+            color: 'var(--col-text-primary)',
             textTransform: 'uppercase',
             lineHeight: 1.2,
             wordBreak: 'break-word',
@@ -354,11 +315,10 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
         </h3>
         {item.descripcion_secundaria && (
           <p
-            className={onOrange ? 'tv-priority-high__body' : undefined}
             style={{
               fontSize: '11px',
               fontWeight: 600,
-              color: onOrange ? undefined : 'var(--col-text-muted)',
+              color: 'var(--col-text-muted)',
               marginTop: 4,
               lineHeight: 1.3,
               wordBreak: 'break-word',
@@ -377,24 +337,22 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         {item.meta_valor && (
           <div
-            className={onOrange ? 'tv-priority-high__meta' : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: onOrange ? undefined : 'rgba(184, 115, 51, 0.04)',
+              background: 'rgba(184, 115, 51, 0.04)',
               padding: '6px 12px',
               borderRadius: 8,
-              border: onOrange ? undefined : '1px solid rgba(184, 115, 51, 0.08)',
+              border: '1px solid rgba(184, 115, 51, 0.08)',
             }}
           >
-            <Target size={11} color={onOrange ? '#ffffff' : 'var(--col-brand)'} />
+            <Target size={11} color={'var(--col-brand)'} />
             <span
-              className={onOrange ? 'tv-priority-high__title' : undefined}
               style={{
                 fontSize: '11px',
                 fontWeight: 900,
-                color: onOrange ? undefined : 'var(--col-text-primary)',
+                color: 'var(--col-text-primary)',
               }}
             >
               {item.meta_valor}
@@ -403,9 +361,8 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
         )}
 
         <div style={{ minWidth: 80 }}>
-          <StatusBadge 
-            status={item.estado} 
-            onBrand={onOrange} 
+          <StatusBadge
+            status={item.estado}
             isFocused={isFocused}
             onClick={onStatusClick}
           />
@@ -415,10 +372,10 @@ const TaskCard = ({ item, index, isFocused, onStatusClick }) => {
   );
 };
 
-const StatusBadge = ({ status, onBrand, isFocused, onClick }) => {
+const StatusBadge = ({ status, isFocused, onClick }) => {
   const configs = {
-    pendiente: { label: 'PENDIENTE', icon: Clock, color: onBrand ? '#ffffff' : 'var(--col-text-muted)' },
-    en_progreso: { label: 'EN PROGRESO', icon: Loader2, color: onBrand ? '#ffffff' : 'var(--col-brand)' },
+    pendiente: { label: 'PENDIENTE', icon: Clock, color: 'var(--col-brand)' },
+    en_progreso: { label: 'EN PROGRESO', icon: Loader2, color: 'var(--col-brand)' },
     completado: { label: 'COMPLETADO', icon: CheckCircle2, color: '#10b981' },
   };
 
@@ -434,7 +391,6 @@ const StatusBadge = ({ status, onBrand, isFocused, onClick }) => {
 
   return (
     <div
-      className={onBrand ? 'tv-priority-high__status' : undefined}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -449,26 +405,24 @@ const StatusBadge = ({ status, onBrand, isFocused, onClick }) => {
         cursor: 'pointer',
         background: isFocused
           ? 'rgba(255, 255, 255, 0.28)'
-          : onBrand
-            ? 'rgba(255, 255, 255, 0.15)'
-            : 'var(--col-gauge-track)',
+          : 'var(--col-gauge-track)',
         padding: '6px 10px',
         borderRadius: 6,
         border: isFocused
           ? '1px solid #ffffff'
-          : `1px solid ${onBrand ? 'rgba(255, 255, 255, 0.28)' : 'var(--col-border)'}`,
+          : `1px solid var(--col-border)`,
         transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'scale(1.03)';
-        e.currentTarget.style.background = onBrand ? 'rgba(255, 255, 255, 0.22)' : 'var(--col-gauge-track)';
-        if (!onBrand) e.currentTarget.style.borderColor = 'var(--col-brand)';
+        e.currentTarget.style.background = 'var(--col-gauge-track)';
+        e.currentTarget.style.borderColor = 'var(--col-brand)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.background = onBrand ? 'rgba(255, 255, 255, 0.15)' : 'var(--col-gauge-track)';
-        if (!onBrand) e.currentTarget.style.borderColor = 'var(--col-border)';
+        e.currentTarget.style.background = 'var(--col-gauge-track)';
+        e.currentTarget.style.borderColor = 'var(--col-border)';
       }}
     >
       <Icon size={10} className={status === 'en_progreso' ? 'animate-spin' : ''} />

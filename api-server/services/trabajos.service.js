@@ -52,6 +52,11 @@ const COL = {
   DESP_KG:          78,
   OBSERVACIONES:    82,
   ESTADO:           83,
+  PARADA_LIMPIEZA:  16,
+  PARADA_PRUEBAS:   22,
+  PARADA_INSUMO:    28,
+  PRODUCCION_KG:    66,
+  DESP_PCT_KG:      79,
 };
 
 // Convierte número serial de Excel a fecha YYYY-MM-DD
@@ -208,7 +213,19 @@ class TrabajosService {
       preview: [],
     };
 
-    for (let i = 14; i < rows.length; i++) {
+    // Detectar fila de inicio de datos dinámicamente
+    let startRow = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || !r[0]) continue;
+      const col0 = String(r[0]).trim();
+      if (col0 === 'PEDIDO' || col0 === 'undefined') continue;
+      const fecha = r[2];
+      const cliente = String(r[8] || '').trim();
+      if (fecha && cliente) { startRow = i; break; }
+    }
+
+    for (let i = startRow; i < rows.length; i++) {
       const row = rows[i];
 
       // Detectar fin de datos
@@ -230,11 +247,15 @@ class TrabajosService {
         const destino_raw   = String(row[COL.DESTINO] || 'LAMINACION').trim().toUpperCase();
         const destino       = ['LAMINACION','CORTE','TODAS'].includes(destino_raw) ? destino_raw : 'LAMINACION';
         const meta_kg       = parseFloat(row[COL.META_KG]) || 0;
+        const produccion_kg = parseFloat(row[COL.PRODUCCION_KG]) || null;
 
         const tiempo_parada_total_min = parseInt(row[COL.TIEMPO_PARADA]) || 0;
         const tiempo_produccion_min   = parseInt(row[COL.TIEMPO_PROD])   || 0;
         const tiempo_total_min        = parseInt(row[COL.TIEMPO_TOTAL])  || 0;
         const metros_producidos       = parseFloat(row[COL.METROS_ML])   || 0;
+        const parada_limpieza_min     = parseInt(row[COL.PARADA_LIMPIEZA]) || 0;
+        const parada_pruebas_min      = parseInt(row[COL.PARADA_PRUEBAS])  || 0;
+        const parada_insumo_min       = parseInt(row[COL.PARADA_INSUMO])   || 0;
 
         // Estado: col 83, fallback buscando en últimas columnas
         let status_orden = 'PROCESO';
@@ -268,6 +289,7 @@ class TrabajosService {
         const desp_kg      = parseFloat(row[COL.DESP_KG])        || 0; // kg film desperdiciado
         const desp_tinta   = parseFloat(row[COL.TINTA_TOTAL_KG]) || 0; // consumo total tinta (Kg)
         const desp_solvente = parseFloat(row[COL.SOLVENTE_LTS])  || 0; // solvente (Lts)
+        const desp_pct_kg   = parseFloat(row[COL.DESP_PCT_KG])   || null; // % kg desperdicio
 
         // ── Validación mínima ────────────────────────────────────────
         if (!fecha || !cliente || !producto) {
@@ -276,9 +298,10 @@ class TrabajosService {
         }
 
         const trabajoData = {
-          maquina_id, numero_pedido, fecha, cliente, producto, destino, meta_kg,
+          maquina_id, numero_pedido, fecha, cliente, producto, destino, meta_kg, produccion_kg,
           metros_producidos, tiempo_produccion_min, tiempo_parada_total_min,
-          tiempo_total_min, status_orden, observaciones,
+          tiempo_total_min, parada_limpieza_min, parada_pruebas_min, parada_insumo_min,
+          status_orden, observaciones,
         };
 
         // ── Modo Preview ─────────────────────────────────────────────
@@ -321,16 +344,17 @@ class TrabajosService {
         }
 
         // Desperdicio (solo film y m/l)
-        if (desp_kg > 0 || desp_tinta > 0 || desp_solvente > 0 || desp_ml > 0) {
+        if (desp_kg > 0 || desp_tinta > 0 || desp_solvente > 0 || desp_ml > 0 || desp_pct_kg != null) {
           const [r] = await pool.execute(
             `INSERT INTO desperdicios
-              (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+              (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
               maquina_id,
               trabajo.id,
               desp_kg,                // kg total (solo film desperdiciado, NO sumar tinta)
               desp_ml,                // metros lineales de desperdicio (m/l)
+              desp_pct_kg,            // % kg desperdicio
               `Film: ${desp_kg} kg | m/l: ${desp_ml} | Tinta consumida: ${desp_tinta} kg | Solvente: ${desp_solvente} lts`,
               fecha,
             ]

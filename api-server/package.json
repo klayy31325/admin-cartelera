@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "node --watch app.js"
+    "dev": "node --watch app.js",
+    "migrate": "node scratch/add_orden_column.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

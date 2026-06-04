@@ -1,6 +1,6 @@
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, Cell, PieChart, Pie
+  ResponsiveContainer, Cell
 } from 'recharts';
 import { AlertTriangle, Trash2, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -99,8 +99,8 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
     : allBreakdown;
 
   const global = maquina_id && breakdown.length > 0
-    ? { total_kg: breakdown[0].total_kg, total_ml: breakdown[0].total_ml }
-    : data?.desperdicio ?? { total_kg: 0, total_ml: 0 };
+    ? { total_kg: breakdown[0].total_kg, total_ml: breakdown[0].total_ml, pct_kg_total: breakdown[0].pct_kg_total }
+    : data?.desperdicio ?? { total_kg: 0, total_ml: 0, pct_kg_total: 0 };
 
   return (
     <div className="slide-page" style={{ gridTemplateRows: maquina ? '1fr' : 'auto 1fr' }}>
@@ -115,6 +115,14 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
               {maquina}
             </h2>
           </div>
+          {Number(global.pct_kg_total) > 0 && (
+            <div style={{ position: 'absolute', bottom: 40, right: 40, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: '14px', color: 'var(--col-text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>% KG</span>
+              <span style={{ fontSize: '48px', fontWeight: 900, color: 'var(--col-warn)', fontFamily: 'var(--font-mono)' }}>
+                {Number(global.pct_kg_total).toFixed(2)}%
+              </span>
+            </div>
+          )}
         </section>
       ) : (
         <>
@@ -130,6 +138,7 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
             </div>
             <WasteKpi label="TOTAL DESPERDICIO" value={Number(global.total_kg).toFixed(1)} unit="kg" color="var(--col-danger)" variant="glass-brand" />
             <WasteKpi label="TOTAL LINEAL" value={Number(global.total_ml).toLocaleString()} unit="ml" color="var(--col-text-muted)" />
+            <WasteKpi label="% KG" value={Number(global.pct_kg_total).toFixed(2)} unit="%" color="var(--col-warn)" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, minHeight: 0 }}>
@@ -175,7 +184,12 @@ export default function SlideWaste({ data, maquina, maquina_id }) {
                   <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--col-text-primary)' }}>{m.maquina_nombre}</span>
-                      <span style={{ fontSize: '12px', color: 'var(--col-danger)', fontWeight: 900 }}>{Number(m.total_kg).toFixed(1)} kg</span>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        {Number(m.pct_kg_total) > 0 && (
+                          <span style={{ fontSize: '11px', color: 'var(--col-warn)', fontWeight: 700 }}>{Number(m.pct_kg_total).toFixed(2)}%</span>
+                        )}
+                        <span style={{ fontSize: '12px', color: 'var(--col-danger)', fontWeight: 900 }}>{Number(m.total_kg).toFixed(1)} kg</span>
+                      </div>
                     </div>
                     <div style={{ width: '100%', height: 2, background: 'rgba(255,255,255,0.05)', marginTop: 8, borderRadius: 1 }}>
                       <div style={{ width: `${Math.min((m.total_kg / global.total_kg) * 100, 100)}%`, height: '100%', background: 'var(--col-danger)' }} />

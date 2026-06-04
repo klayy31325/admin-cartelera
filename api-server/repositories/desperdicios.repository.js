@@ -2,10 +2,10 @@ const { pool } = require('../config/db');
 
 class DesperdiciosRepository {
   async create(data) {
-    const { maquina_id, cantidad_kg, cantidad_ml, comentario, fecha, trabajo_id } = data;
+    const { maquina_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha, trabajo_id } = data;
     const [result] = await pool.execute(
-      'INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, comentario, fecha) VALUES (?, ?, ?, ?, ?, ?)',
-      [maquina_id, trabajo_id || null, cantidad_kg, cantidad_ml, comentario || null, fecha || new Date()]
+      'INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [maquina_id, trabajo_id || null, cantidad_kg, cantidad_ml, porcentaje_kg || null, comentario || null, fecha || new Date()]
     );
     return { id: result.insertId, ...data };
   }
@@ -27,14 +27,21 @@ class DesperdiciosRepository {
     const dateToQuery = fecha || new Date().toISOString().split('T')[0];
     let sql = `
       SELECT 
-        COALESCE(SUM(cantidad_kg), 0) as total_kg,
-        COALESCE(SUM(cantidad_ml), 0) as total_ml
-      FROM desperdicios
-      WHERE fecha = ?
+        COALESCE(SUM(d.cantidad_kg), 0) as total_kg,
+        COALESCE(SUM(d.cantidad_ml), 0) as total_ml,
+        ROUND(COALESCE(AVG(NULLIF(d.porcentaje_kg, 0)), 0), 4) as promedio_pct_kg,
+        COALESCE(SUM(t.produccion_kg), 0) as total_produccion_kg,
+        CASE WHEN COALESCE(SUM(t.produccion_kg), 0) > 0
+          THEN ROUND(SUM(d.cantidad_kg) / SUM(t.produccion_kg) * 100, 2)
+          ELSE 0
+        END as pct_kg_total
+      FROM desperdicios d
+      LEFT JOIN trabajos t ON d.trabajo_id = t.id
+      WHERE d.fecha = ?
     `;
     const params = [dateToQuery];
     if (maquina_id) {
-      sql += ' AND maquina_id = ?';
+      sql += ' AND d.maquina_id = ?';
       params.push(maquina_id);
     }
     const [[row]] = await pool.execute(sql, params);
@@ -45,14 +52,21 @@ class DesperdiciosRepository {
     const monthToQuery = mes || new Date().toISOString().slice(0, 7);
     let sql = `
       SELECT 
-        COALESCE(SUM(cantidad_kg), 0) as total_kg,
-        COALESCE(SUM(cantidad_ml), 0) as total_ml
-      FROM desperdicios
-      WHERE fecha LIKE ?
+        COALESCE(SUM(d.cantidad_kg), 0) as total_kg,
+        COALESCE(SUM(d.cantidad_ml), 0) as total_ml,
+        ROUND(COALESCE(AVG(NULLIF(d.porcentaje_kg, 0)), 0), 4) as promedio_pct_kg,
+        COALESCE(SUM(t.produccion_kg), 0) as total_produccion_kg,
+        CASE WHEN COALESCE(SUM(t.produccion_kg), 0) > 0
+          THEN ROUND(SUM(d.cantidad_kg) / SUM(t.produccion_kg) * 100, 2)
+          ELSE 0
+        END as pct_kg_total
+      FROM desperdicios d
+      LEFT JOIN trabajos t ON d.trabajo_id = t.id
+      WHERE d.fecha LIKE ?
     `;
     const params = [`${monthToQuery}%`];
     if (maquina_id) {
-      sql += ' AND maquina_id = ?';
+      sql += ' AND d.maquina_id = ?';
       params.push(maquina_id);
     }
     const [[row]] = await pool.execute(sql, params);
@@ -65,23 +79,29 @@ class DesperdiciosRepository {
         m.id as maquina_id,
         m.nombre as maquina_nombre,
         COALESCE(SUM(d.cantidad_kg), 0) as total_kg,
-        COALESCE(SUM(d.cantidad_ml), 0) as total_ml
+        COALESCE(SUM(d.cantidad_ml), 0) as total_ml,
+        ROUND(COALESCE(AVG(NULLIF(d.porcentaje_kg, 0)), 0), 4) as promedio_pct_kg,
+        COALESCE(SUM(t.produccion_kg), 0) as total_produccion_kg,
+        CASE WHEN COALESCE(SUM(t.produccion_kg), 0) > 0
+          THEN ROUND(SUM(d.cantidad_kg) / SUM(t.produccion_kg) * 100, 2)
+          ELSE 0
+        END as pct_kg_total
       FROM maquinas m
-      LEFT JOIN desperdicios d ON m.id = d.maquina_id 
+      LEFT JOIN desperdicios d ON m.id = d.maquina_id
+        AND ${mes ? "d.fecha LIKE ?" : "d.fecha = ?"}
+      LEFT JOIN trabajos t ON d.trabajo_id = t.id
+      WHERE m.empresa_id = 2
     `;
-    
+
     const params = [];
     if (mes) {
-      sql += ' AND d.fecha LIKE ?';
       params.push(`${mes}%`);
     } else {
       const dateToQuery = fecha || new Date().toISOString().split('T')[0];
-      sql += ' AND d.fecha = ?';
       params.push(dateToQuery);
     }
 
     sql += `
-      WHERE m.empresa_id = 2
       GROUP BY m.id, m.nombre
       ORDER BY total_kg DESC
     `;

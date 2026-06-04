@@ -66,20 +66,25 @@ class VelocidadRepository {
 
   async getResumenHoy(maquina_id = null) {
     const today = new Date().toISOString().split('T')[0];
-    let sql = `
-      SELECT
-        ROUND(AVG(velocidad_teorica_mlmin), 2) AS promedio_teorica,
-        ROUND(AVG(velocidad_real_mlmin), 2)    AS promedio_real,
-        ROUND(AVG(velocidad_real_mlmin / NULLIF(velocidad_teorica_mlmin,0) * 100), 1) AS rendimiento_pct,
-        COUNT(*) AS registros
-       FROM velocidad
-       WHERE fecha = ?
-    `;
+    const baseWhere = 'WHERE t.fecha = ?';
     const params = [today];
+    let maquinaWhere = '';
     if (maquina_id) {
-      sql += ' AND maquina_id = ?';
+      maquinaWhere = ' AND t.maquina_id = ?';
       params.push(maquina_id);
     }
+    const sql = `
+      SELECT
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0), 0), 2) AS promedio_teorica,
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0), 0), 2) AS promedio_real,
+        ROUND(COALESCE(
+          (SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0))
+          / NULLIF((SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0)), 0) * 100,
+        0), 1) AS rendimiento_pct,
+        COUNT(t.id) AS registros
+       FROM trabajos t
+       ${baseWhere}${maquinaWhere}
+    `;
     const [[resumen]] = await pool.execute(sql, params);
     return resumen;
   }
@@ -106,53 +111,49 @@ class VelocidadRepository {
 
   async getResumenMes(mes, maquina_id = null) {
     const monthToQuery = mes || new Date().toISOString().slice(0, 7);
-    let sql = `
-      SELECT
-        ROUND(AVG(velocidad_teorica_mlmin), 2) AS promedio_teorica,
-        ROUND(AVG(velocidad_real_mlmin), 2)    AS promedio_real,
-        ROUND(AVG(velocidad_real_mlmin / NULLIF(velocidad_teorica_mlmin,0) * 100), 1) AS rendimiento_pct,
-        COUNT(*) AS registros
-       FROM velocidad
-       WHERE fecha LIKE ?
-    `;
+    const baseWhere = 'WHERE t.fecha LIKE ?';
     const params = [`${monthToQuery}%`];
+    let maquinaWhere = '';
     if (maquina_id) {
-      sql += ' AND maquina_id = ?';
+      maquinaWhere = ' AND t.maquina_id = ?';
       params.push(maquina_id);
     }
+    const sql = `
+      SELECT
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0), 0), 2) AS promedio_teorica,
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0), 0), 2) AS promedio_real,
+        ROUND(COALESCE(
+          (SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0))
+          / NULLIF((SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0)), 0) * 100,
+        0), 1) AS rendimiento_pct,
+        COUNT(t.id) AS registros
+       FROM trabajos t
+       ${baseWhere}${maquinaWhere}
+    `;
     const [[resumen]] = await pool.execute(sql, params);
     return resumen;
   }
 
   async getBreakdownByMachine(fecha = null, mes = null) {
-    let sql = `
+    const datePattern = mes ? `${mes}%` : (fecha || new Date().toISOString().split('T')[0]);
+    const sql = `
       SELECT 
         m.id as maquina_id,
         m.nombre as maquina_nombre,
-        ROUND(COALESCE(AVG(v.velocidad_real_mlmin), 0), 1) as avg_real,
-        ROUND(COALESCE(AVG(v.velocidad_teorica_mlmin), 0), 1) as avg_teorica,
-        ROUND(COALESCE(AVG(v.velocidad_real_mlmin / NULLIF(v.velocidad_teorica_mlmin, 0) * 100), 0), 1) as rendimiento_pct
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0), 0), 1) as avg_real,
+        ROUND(COALESCE(SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0), 0), 1) as avg_teorica,
+        ROUND(COALESCE(
+          (SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_total_min) - COALESCE(SUM(t.parada_insumo_min),0) - COALESCE(SUM(t.parada_limpieza_min),0) - COALESCE(SUM(t.parada_pruebas_min),0), 0))
+          / NULLIF((SUM(t.metros_producidos) / NULLIF(SUM(t.tiempo_produccion_min), 0)), 0) * 100,
+        0), 1) as rendimiento_pct
       FROM maquinas m
-      LEFT JOIN velocidad v ON m.id = v.maquina_id 
-    `;
-    
-    const params = [];
-    if (mes) {
-      sql += ' AND v.fecha LIKE ?';
-      params.push(`${mes}%`);
-    } else {
-      const dateToQuery = fecha || new Date().toISOString().split('T')[0];
-      sql += ' AND v.fecha = ?';
-      params.push(dateToQuery);
-    }
-
-    sql += `
+      JOIN trabajos t ON m.id = t.maquina_id AND t.fecha LIKE ?
       WHERE m.empresa_id = 2
       GROUP BY m.id, m.nombre
       ORDER BY rendimiento_pct DESC
     `;
 
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.execute(sql, [datePattern]);
     return rows;
   }
 }

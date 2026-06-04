@@ -23,9 +23,9 @@ interface ProduccionInfo {
   tarea: string;
   meta_valor: number | null;
   descripcion_secundaria: string | null;
-  prioridad: 'baja' | 'media' | 'alta';
   estado: 'pendiente' | 'en_progreso' | 'completado';
   fecha_asignada: string;
+  orden: number;
 }
 
 interface Maquina {
@@ -38,9 +38,9 @@ interface ProduccionInfoFormData {
   tarea: string;
   meta_valor: string;
   descripcion_secundaria: string;
-  prioridad: 'baja' | 'media' | 'alta';
   estado: 'pendiente' | 'en_progreso' | 'completado';
   fecha_asignada: string;
+  orden: string;
 }
 
 export function ProduccionInformativaManager() {
@@ -51,6 +51,9 @@ export function ProduccionInformativaManager() {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [ordenError, setOrdenError] = useState<string | null>(null);
+  const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
+  const [editingInlineValue, setEditingInlineValue] = useState<string>('');
 
   // Estados para paginación y filtros de historial
   const [activeTab, setActiveTab] = useState<'activas' | 'historial'>('activas');
@@ -75,9 +78,9 @@ export function ProduccionInformativaManager() {
     tarea: '',
     meta_valor: '',
     descripcion_secundaria: '',
-    prioridad: 'baja' as const,
     estado: 'pendiente' as const,
-    fecha_asignada: new Date().toISOString().split('T')[0]
+    fecha_asignada: new Date().toISOString().split('T')[0],
+    orden: ''
   });
 
   // Filtrado y Paginación derivados
@@ -119,6 +122,21 @@ export function ProduccionInformativaManager() {
     }
   };
 
+  const fetchNextOrden = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa/next-orden`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setFormData((prev) => ({ ...prev, orden: String(data.data.nextOrden) }));
+        }
+      }
+    } catch {
+      const maxOrden = items.reduce((max, i) => Math.max(max, i.orden || 0), 0);
+      setFormData((prev) => ({ ...prev, orden: String(maxOrden + 1) }));
+    }
+  };
+
   const fetchItems = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/produccion-informativa`);
@@ -138,8 +156,17 @@ export function ProduccionInformativaManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setOrdenError(null);
+
     if (!formData.maquina_id || !formData.tarea) {
       toast.error("Complete los campos obligatorios");
+      return;
+    }
+
+    const ordenNum = Number(formData.orden);
+    if (!ordenNum || ordenNum < 1) {
+      setOrdenError("El orden debe ser un número positivo (mínimo 1)");
+      toast.error("El orden debe ser un número positivo");
       return;
     }
 
@@ -150,7 +177,8 @@ export function ProduccionInformativaManager() {
 
       const payload = {
         ...formData,
-        meta_valor: formData.meta_valor ? Number(formData.meta_valor) : null
+        meta_valor: formData.meta_valor ? Number(formData.meta_valor) : null,
+        orden: ordenNum
       };
 
       const response = await fetch(url, {
@@ -166,16 +194,25 @@ export function ProduccionInformativaManager() {
           tarea: '',
           meta_valor: '',
           descripcion_secundaria: '',
-          prioridad: 'baja',
-          estado: 'pendiente',
-          fecha_asignada: new Date().toISOString().split('T')[0]
+      estado: 'pendiente',
+          fecha_asignada: new Date().toISOString().split('T')[0],
+          orden: ''
         });
+        setOrdenError(null);
         setIsAdding(false);
         setEditingId(null);
         fetchItems();
+        return;
       }
+
+      const errData = await response.json().catch(() => ({}));
+      const msg = errData?.error || "Error al guardar";
+      if (msg.includes('orden')) {
+        setOrdenError(msg);
+      }
+      toast.error(msg);
     } catch (error) {
-      toast.error("Error al guardar");
+      toast.error("Error al conectar con el servidor");
     }
   };
 
@@ -185,10 +222,11 @@ export function ProduccionInformativaManager() {
       tarea: item.tarea,
       meta_valor: item.meta_valor !== null ? item.meta_valor.toString() : '',
       descripcion_secundaria: item.descripcion_secundaria || '',
-      prioridad: item.prioridad,
       estado: item.estado,
-      fecha_asignada: item.fecha_asignada.split('T')[0]
+      fecha_asignada: item.fecha_asignada.split('T')[0],
+      orden: item.orden !== undefined ? item.orden.toString() : ''
     });
+    setOrdenError(null);
     setEditingId(item.id);
     setIsAdding(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -200,7 +238,7 @@ export function ProduccionInformativaManager() {
       const response = await fetch(`${API_BASE_URL}/produccion-informativa/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, estado: nuevoEstado })
+        body: JSON.stringify({ estado: nuevoEstado })
       });
       if (response.ok) {
         toast.success(nuevoEstado === 'completado' ? "Tarea completada" : "Tarea pendiente");
@@ -209,6 +247,43 @@ export function ProduccionInformativaManager() {
     } catch (error) {
       toast.error("Error al actualizar");
     }
+  };
+
+  // Edición inline de orden desde la card
+  const handleInlineOrdenStart = (item: ProduccionInfo) => {
+    setEditingInlineId(item.id);
+    setEditingInlineValue(String(item.orden ?? ''));
+  };
+
+  const handleInlineOrdenSave = async () => {
+    if (editingInlineId === null) return;
+    const newOrden = Number(editingInlineValue);
+    if (!newOrden || newOrden < 1) {
+      toast.error("El orden debe ser un número positivo");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa/${editingInlineId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orden: newOrden })
+      });
+      if (response.ok) {
+        toast.success("Orden actualizado");
+        setEditingInlineId(null);
+        fetchItems();
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        toast.error(errData?.error || "Error al actualizar orden");
+      }
+    } catch {
+      toast.error("Error al conectar con el servidor");
+    }
+  };
+
+  const handleInlineOrdenCancel = () => {
+    setEditingInlineId(null);
+    setEditingInlineValue('');
   };
 
   // Abre el modal para eliminación individual
@@ -298,14 +373,6 @@ export function ProduccionInformativaManager() {
     setSelectedIds([]);
   };
 
-  const getPriorityStyles = (p: string) => {
-    switch (p) {
-      case 'alta': return "bg-red-500/10 text-red-500 border-red-500/20";
-      case 'media': return "bg-brand/10 text-brand border-brand/20";
-      default: return "bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-white/5 dark:border-white/10";
-    }
-  };
-
   const getStatusIcon = (s: string) => {
     switch (s) {
       case 'completado': return <CheckCircle2 size={14} className="text-green-500" />;
@@ -329,8 +396,13 @@ export function ProduccionInformativaManager() {
 
           <Button
             onClick={() => {
-              setIsAdding(!isAdding);
-              if (isAdding) setEditingId(null);
+              const opening = !isAdding;
+              setIsAdding(opening);
+              setOrdenError(null);
+              if (opening) {
+                setEditingId(null);
+                fetchNextOrden();
+              }
             }}
             className={cn(
               "h-10 px-8 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl",
@@ -429,24 +501,27 @@ export function ProduccionInformativaManager() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:col-span-2">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.3em] ml-2">Prioridad</label>
-                  <div className="flex gap-2">
-                    {['baja', 'media', 'alta'].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, prioridad: p as any })}
-                        className={cn(
-                          "flex-1 h-12 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all",
-                          formData.prioridad === p
-                            ? "bg-brand border-brand text-white"
-                            : "bg-transparent border-zinc-100 dark:border-white/5 text-zinc-400"
-                        )}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.3em] ml-2">Orden (posición) *</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="Ej: 1"
+                    value={formData.orden}
+                    onChange={(e) => {
+                      setFormData({ ...formData, orden: e.target.value });
+                      setOrdenError(null);
+                    }}
+                    className={cn(
+                      "h-12 rounded-xl px-6 font-bold border-2",
+                      ordenError
+                        ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700"
+                        : "bg-zinc-50 dark:bg-black/40 border-zinc-100 dark:border-white/[0.05]"
+                    )}
+                  />
+                  {ordenError && (
+                    <p className="text-[10px] font-bold text-red-500 ml-2">{ordenError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -581,9 +656,7 @@ export function ProduccionInformativaManager() {
                     "group relative overflow-hidden p-6 rounded-2xl border-2 transition-all duration-700 flex flex-col md:flex-row items-start md:items-center gap-8",
                     item.estado === 'completado'
                       ? "bg-zinc-100 dark:bg-black/40 border-transparent opacity-60"
-                      : item.prioridad === 'alta'
-                        ? "bg-brand dark:bg-brand border-transparent shadow-2xl shadow-brand/20"
-                        : "bg-white dark:bg-zinc-900/40 border-zinc-100 dark:border-white/[0.03] hover:shadow-2xl hover:border-brand/20"
+                      : "bg-white dark:bg-zinc-900/40 border-zinc-100 dark:border-white/[0.03] hover:shadow-2xl hover:border-brand/20"
                   )}>
                     {selectionMode && (
                       <label className="absolute top-4 right-4 z-10 inline-flex items-center gap-2 cursor-pointer">
@@ -591,32 +664,42 @@ export function ProduccionInformativaManager() {
                           type="checkbox"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => toggleItemSelection(item.id)}
-                          className="h-5 w-5 rounded border-zinc-300 text-brand focus:ring-brand"
+                          className="h-5 w-5 rounded border-zinc-100 text-white focus:ring-brand"
                         />
                       </label>
                     )}
-                    {/* Prioridad y Estado (Lado Izquierdo) */}
-                    <div className="flex flex-row md:flex-col gap-3 min-w-[140px] shrink-0">
-                      <div className={cn(
-                        "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border-2",
-                        item.prioridad === 'alta' && item.estado !== 'completado'
-                          ? "text-white bg-white/15 border-white/25"
-                          : getPriorityStyles(item.prioridad)
-                      )}>
-                        {item.prioridad === 'alta' ? <AlertTriangle size={12} /> : <ArrowUpCircle size={12} />}
-                        {item.prioridad}
-                      </div>
+                    {/* Orden y Estado (Lado Izquierdo) */}
+                    <div className="flex flex-row md:flex-col gap-3 min-w-[180px] shrink-0">
+                      {editingInlineId === item.id ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            autoFocus
+                            value={editingInlineValue}
+                            onChange={(e) => setEditingInlineValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { e.preventDefault(); handleInlineOrdenSave(); }
+                              if (e.key === 'Escape') handleInlineOrdenCancel();
+                            }}
+                            className="w-16 h-10 text-center text-lg font-black rounded-xl px-2"
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => handleInlineOrdenStart(item)}
+                          className="w-12 h-12 bg-brand/10 dark:bg-brand/20 border-2 border-brand/20 rounded-xl flex items-center justify-center cursor-pointer hover:bg-brand/20 hover:border-brand/40 transition-all group relative"
+                          title="Click para editar orden"
+                        >
+                          <span className="text-lg font-black text-brand">{item.orden ?? '-'}</span>
+                        </div>
+                      )}
                       <div className={cn(
                         "flex items-center justify-center gap-2 px-4 py-2 rounded-lg",
-                        item.prioridad === 'alta' && item.estado !== 'completado'
-                          ? "bg-white/15"
-                          : "bg-zinc-100 dark:bg-white/5"
+                        "bg-zinc-100 dark:bg-white/5"
                       )}>
-                        {getStatusIcon(item.estado === 'en_progreso' && item.prioridad === 'alta' ? 'en_progreso_dark' : item.estado)}
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-widest",
-                          item.prioridad === 'alta' && item.estado !== 'completado' ? "text-white" : "text-zinc-800 dark:text-zinc-400"
-                        )}>
+                        {getStatusIcon(item.estado)}
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-800 dark:text-zinc-400">
                           {item.estado.replace('_', ' ')}
                         </span>
                       </div>
@@ -624,18 +707,14 @@ export function ProduccionInformativaManager() {
 
                     {/* Contenido Principal (Centro) */}
                     <div className="flex-1 space-y-2 min-w-0">
-                      <div className={cn(
-                        "flex items-center gap-2",
-                        item.prioridad === 'alta' && item.estado !== 'completado' ? "text-white/80" : "text-brand"
-                      )}>
+                      <div className="flex items-center gap-2 text-brand">
                         <Cpu size={14} className="opacity-70" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">
                           UNIDAD {item.maquina_id} • {item.maquina_nombre}
                         </span>
                       </div>
                       <h3 className={cn(
-                        "text-lg md:text-xl font-black uppercase tracking-tighter leading-tight break-words line-clamp-2",
-                        item.prioridad === 'alta' && item.estado !== 'completado' ? "text-white" : "text-black dark:text-white",
+                        "text-lg md:text-xl font-black uppercase tracking-tighter leading-tight break-words line-clamp-2 text-black dark:text-white",
                         item.tarea.length > 50 ? "md:text-lg" : "",
                         item.tarea.length > 100 ? "md:text-base" : ""
                       )}>
@@ -643,8 +722,7 @@ export function ProduccionInformativaManager() {
                       </h3>
                       {item.descripcion_secundaria && (
                         <p className={cn(
-                          "text-sm font-medium break-words line-clamp-2",
-                          item.prioridad === 'alta' && item.estado !== 'completado' ? "text-white/85" : "text-zinc-500 dark:text-zinc-400",
+                          "text-sm font-medium break-words line-clamp-2 text-zinc-500 dark:text-zinc-400",
                           item.descripcion_secundaria.length > 100 ? "text-xs" : ""
                         )}>
                           {item.descripcion_secundaria}
@@ -654,13 +732,8 @@ export function ProduccionInformativaManager() {
 
                     {/* Meta y Acciones (Derecha) */}
                     <div className="flex flex-wrap md:flex-nowrap items-center gap-6 w-full md:w-auto shrink-0">
-                      <div className={cn(
-                        "inline-flex items-center gap-3 px-6 py-3 rounded-lg border transition-all",
-                        item.prioridad === 'alta' && item.estado !== 'completado'
-                          ? "bg-white/15 border-white/20 text-white"
-                          : "bg-zinc-50 dark:bg-white/5 border-zinc-100 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
-                      )}>
-                        <Target size={16} className={item.prioridad === 'alta' && item.estado !== 'completado' ? "text-white" : "text-brand"} />
+                      <div className="inline-flex items-center gap-3 px-6 py-3 rounded-lg border transition-all bg-zinc-50 dark:bg-white/5 border-zinc-100 dark:border-white/10 text-zinc-600 dark:text-zinc-300">
+                        <Target size={16} className="text-brand" />
                         <span className="text-base font-black tracking-tight">{item.meta_valor ? `${item.meta_valor} MTS` : "S/M"}</span>
                       </div>
 
@@ -673,29 +746,19 @@ export function ProduccionInformativaManager() {
                             "w-12 h-12 rounded-lg transition-all border-2",
                             item.estado === 'completado'
                               ? "bg-green-500 border-green-500 text-white"
-                              : item.prioridad === 'alta'
-                                ? "bg-white/15 border-white/25 text-white hover:bg-white/25"
-                                : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/5 text-zinc-400 hover:text-green-500 hover:border-green-500"
+                              : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/5 text-zinc-400 hover:text-green-500 hover:border-green-500"
                           )}
                         >
                           <CheckCircle2 size={18} />
                         </Button>
 
-                        <div className={cn(
-                          "h-8 w-px",
-                          item.prioridad === 'alta' && item.estado !== 'completado' ? "bg-white/20" : "bg-zinc-100 dark:bg-white/10"
-                        )} />
+                        <div className="h-8 w-px bg-zinc-100 dark:bg-white/10" />
 
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleEdit(item)}
-                          className={cn(
-                            "w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current",
-                            item.prioridad === 'alta' && item.estado !== 'completado'
-                              ? "text-white hover:bg-white/15"
-                              : "bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10"
-                          )}
+                          className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10"
                         >
                           <Edit2 size={18} />
                         </Button>
@@ -703,12 +766,7 @@ export function ProduccionInformativaManager() {
                           variant="ghost"
                           size="icon"
                           onClick={() => triggerDelete(item.id)}
-                          className={cn(
-                            "w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current",
-                            item.prioridad === 'alta' && item.estado !== 'completado'
-                              ? "text-white hover:bg-white/15 hover:text-red-100"
-                              : "bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10"
-                          )}
+                          className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10"
                         >
                           <Trash2 size={18} />
                         </Button>
