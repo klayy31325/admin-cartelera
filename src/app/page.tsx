@@ -4,13 +4,22 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api-config";
 import Image from "next/image";
-import { Lock, User, Terminal as TerminalIcon, Loader2, Mail, Building, Briefcase } from "lucide-react";
+import { Lock, User, Terminal as TerminalIcon, Loader2, Mail, Building, Briefcase, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/components/auth-provider";
+
+const ROLES_OPTIONS = [
+  { value: "admin", label: "Administrador" },
+  { value: "editor", label: "Editor" },
+  { value: "operador", label: "Operador (Carga Excel)" },
+  { value: "visor", label: "Visualizador" },
+];
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   const [isLoginView, setIsLoginView] = useState(true);
@@ -24,6 +33,7 @@ export default function LoginPage() {
     password: "",
     empresa: "",
     departamento: "",
+    rol: "",
   });
 
   const backgrounds = ["/OLYMPIA.png", "/novoflex.png"];
@@ -65,9 +75,8 @@ export default function LoginPage() {
           throw new Error(data.error?.message || "Credenciales incorrectas");
         }
 
-        // Guardar token y redirigir
-        localStorage.setItem("curex_token", data.data.token);
-        localStorage.setItem("curex_user", JSON.stringify(data.data.usuario));
+        // Guardar token y redirigir usando AuthContext
+        login(data.data.token, data.data.usuario);
         router.push("/admin/production");
 
       } else {
@@ -214,6 +223,27 @@ export default function LoginPage() {
                         className="bg-white/10 border-white/10 pl-10 h-12 text-white focus:border-brand/50 focus:bg-white/15 transition-all"
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {!isLoginView && (
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest ml-1">ROL DE ACCESO</label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-3 top-3 text-zinc-600" size={18} />
+                    <select
+                      name="rol"
+                      value={formData.rol}
+                      onChange={handleChange}
+                      required={!isLoginView}
+                      className="flex h-12 w-full rounded-md border border-white/10 bg-white/10 pl-10 pr-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:border-brand/50 focus:bg-white/15 transition-all disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                    >
+                      <option value="" disabled className="bg-zinc-900">Seleccionar Rol</option>
+                      {ROLES_OPTIONS.map((r) => (
+                        <option key={r.value} value={r.value} className="bg-zinc-900 text-white">{r.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )}

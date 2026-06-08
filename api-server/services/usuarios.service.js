@@ -66,8 +66,8 @@ class UsuariosService {
     }
 
     // ── Resolver IDs (3FN) ──
-    // El rol siempre es 'admin' por defecto — se puede cambiar después desde el sistema
-    const rolFinal = rol || 'admin';
+    // Si no se pasa rol, se asigna 'visor' como default seguro
+    const rolFinal = rol || 'visor';
     const empresa_id      = await produccionRepository.getEmpresaId(empresa);
     const departamento_id = await usuariosRepository.findOrCreateDepartamento(departamento);
     const rol_id          = await usuariosRepository.getRolId(rolFinal);

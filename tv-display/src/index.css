@@ -198,7 +198,7 @@ body::after {
   color: var(--col-text-primary);
   background: rgba(249, 115, 22, 0.06);
   backdrop-filter: var(--blur-glass);
-  border: 1px solid rgba(249, 115, 22, 0.2);
+  border: 1px solid rgb(250, 104, 0);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-glass);
   position: relative;
@@ -595,7 +595,7 @@ body::after {
 .slide-general {
   display: grid;
   grid-template-columns: 1.2fr 3fr;
-  gap: 20px;
+  gap: 10px;
   height: 100%;
   position: relative;
 }
@@ -603,12 +603,12 @@ body::after {
 .slide-general__kpis {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   height: 100%;
 }
 
 .slide-general__chart {
-  padding: 16px 20px 20px;
+  padding: 10px 14px 12px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -679,12 +679,12 @@ body::after {
 }
 
 .slide-general__chart-header {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   flex-shrink: 0;
 }
 
 .slide-general__chart-header h2 {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: var(--col-text-primary);
   letter-spacing: 0.08em;
@@ -701,10 +701,10 @@ body::after {
 .slide-general__chart-list {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
   justify-content: flex-start;
   height: 100%;
-  padding: 6px 0;
+  padding: 4px 0;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -726,7 +726,7 @@ body::after {
 }
 
 .parada-row__name {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--col-text-primary);
   text-transform: uppercase;
@@ -742,7 +742,7 @@ body::after {
 
 .parada-row__time {
   font-size: 12px;
-  color: var(--col-text-muted);
+  color: var(--col-text-primary);
   font-weight: 500;
   margin-left: 6px;
 }
@@ -767,6 +767,38 @@ body::after {
 
 .tv-kpi {
   padding: 16px 20px;
+  display: flex;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.parada-row__info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.parada-row__name {
+  font-size: 17px;
+  font-weight: 800;
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+
+.light-theme .parada-row__bar-container {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.parada-row__bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tv-kpi {
+  padding: 5px 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;

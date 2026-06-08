@@ -124,7 +124,10 @@ export function ProduccionInformativaManager() {
 
   const fetchNextOrden = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/produccion-informativa/next-orden`);
+      const token = localStorage.getItem("curex_token");
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa/next-orden`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -139,7 +142,10 @@ export function ProduccionInformativaManager() {
 
   const fetchItems = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/produccion-informativa`);
+      const token = localStorage.getItem("curex_token");
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -181,9 +187,10 @@ export function ProduccionInformativaManager() {
         orden: ordenNum
       };
 
+      const token = localStorage.getItem("curex_token");
       const response = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
 
@@ -235,9 +242,10 @@ export function ProduccionInformativaManager() {
   const toggleComplete = async (item: ProduccionInfo) => {
     const nuevoEstado = item.estado === 'completado' ? 'pendiente' : 'completado';
     try {
+      const token = localStorage.getItem("curex_token");
       const response = await fetch(`${API_BASE_URL}/produccion-informativa/${item.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ estado: nuevoEstado })
       });
       if (response.ok) {
@@ -263,9 +271,10 @@ export function ProduccionInformativaManager() {
       return;
     }
     try {
+      const token = localStorage.getItem("curex_token");
       const response = await fetch(`${API_BASE_URL}/produccion-informativa/${editingInlineId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orden: newOrden })
       });
       if (response.ok) {
@@ -302,7 +311,11 @@ export function ProduccionInformativaManager() {
   // Ejecución definitiva del borrado individual
   const executeSingleDelete = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/produccion-informativa/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem("curex_token");
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (response.ok) {
         toast.success("Tarea eliminada");
         setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
@@ -317,7 +330,13 @@ export function ProduccionInformativaManager() {
   const executeBulkDelete = async () => {
     try {
       const results = await Promise.allSettled(
-        selectedIds.map((id) => fetch(`${API_BASE_URL}/produccion-informativa/${id}`, { method: 'DELETE' }))
+        selectedIds.map((id) => {
+          const token = localStorage.getItem("curex_token");
+          return fetch(`${API_BASE_URL}/produccion-informativa/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        })
       );
 
       const deletedCount = results.filter(

@@ -206,7 +206,7 @@ class TrabajosService {
 
     const resultados = {
       insertados: 0,
-      duplicados: 0,
+      actualizados: 0,
       errores: [],
       velocidad_insertada: 0,
       desperdicio_insertado: 0,
@@ -315,10 +315,13 @@ class TrabajosService {
           continue;
         }
 
-        // ── Verificar duplicado ──────────────────────────────────────
+        // ── Verificar duplicado → ACTUALIZAR (reemplazar) ────────────
         const existente = await trabajosRepository.existsByPedidoMaquinaFecha(numero_pedido, maquina_id, fecha);
         if (existente) {
-          resultados.duplicados++;
+          const velData = vel_teorica || vel_real ? { turno: 'A', teorica: vel_teorica, real: vel_real } : null;
+          const despData = { kg_film: desp_kg, ml_film: desp_ml, tinta_kg: desp_tinta, solvente_lts: desp_solvente, porcentaje_kg: desp_pct_kg };
+          await trabajosRepository.update(existente, trabajoData, paradasMinutos, velData, despData);
+          resultados.actualizados = (resultados.actualizados || 0) + 1;
           continue;
         }
 
@@ -330,7 +333,7 @@ class TrabajosService {
         if (vel_teorica || vel_real) {
           const conn = await pool.getConnection();
           try {
-            const turno_id = await getTurnoId(conn, 'A'); // Excel no especifica turno, default A
+            const turno_id = await getTurnoId(conn, 'A');
             await conn.execute(
               `INSERT INTO velocidad
                 (maquina_id, trabajo_id, turno_id, fecha, velocidad_teorica_mlmin, velocidad_real_mlmin)
@@ -352,9 +355,9 @@ class TrabajosService {
             [
               maquina_id,
               trabajo.id,
-              desp_kg,                // kg total (solo film desperdiciado, NO sumar tinta)
-              desp_ml,                // metros lineales de desperdicio (m/l)
-              desp_pct_kg,            // % kg desperdicio
+              desp_kg,
+              desp_ml,
+              desp_pct_kg,
               `Film: ${desp_kg} kg | m/l: ${desp_ml} | Tinta consumida: ${desp_tinta} kg | Solvente: ${desp_solvente} lts`,
               fecha,
             ]
@@ -370,7 +373,7 @@ class TrabajosService {
     // ── Registrar en Logs de Actividad ──
     try {
       let desc = `[IMPORTACIÓN EXCEL] Se cargaron ${resultados.insertados} trabajos en ${maquinaNombre}.`;
-      if (resultados.duplicados > 0) desc += ` (${resultados.duplicados} omitidos por duplicidad).`;
+      if (resultados.actualizados > 0) desc += ` (${resultados.actualizados} trabajos actualizados por re-importación).`;
       if (resultados.velocidad_insertada > 0) desc += ` Eficiencia detectada en ${resultados.velocidad_insertada} registros.`;
       if (resultados.desperdicio_insertado > 0) desc += ` Desperdicios detectados en ${resultados.desperdicio_insertado} registros.`;
 
@@ -492,4 +495,123 @@ class TrabajosService {
   }
 }
 
-module.exports = new TrabajosService();
+  /**
+   * Verifica que los datos del Excel coincidan con la DB sin importar.
+   * Retorna un reporte de diferencias.
+   */
+  async verifyExcel(buffer, maquinaNombre) {
+    const maquina_id = MAQUINA_IDS[maquinaNombre?.toUpperCase()];
+    if (!maquina_id) throw new AppError('Máquina inválida. Use OLYMPIA o NOVOFLEX.', HTTP_STATUS.BAD_REQUEST);
+
+    const wb = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = wb.SheetNames.find(n => n.toUpperCase().replace(/\./g, '').trim() === maquinaNombre.toUpperCase());
+    if (!sheetName) throw new AppError(`Hoja "${maquinaNombre}" no encontrada.`, HTTP_STATUS.BAD_REQUEST);
+
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
+
+    // ── Leer Excel (misma lógica que import) ──
+    let startRow = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || !r[0]) continue;
+      if (String(r[0]).trim() === 'PEDIDO' || String(r[0]).trim() === 'undefined') continue;
+      if (r[2] && String(r[8] || '').trim()) { startRow = i; break; }
+    }
+
+    const PARADAS_MAP = [
+      { col: 11, id: 1 }, { col: 12, id: 2 }, { col: 13, id: 3 }, { col: 14, id: 4 },
+      { col: 15, id: 5 }, { col: 16, id: 6 }, { col: 17, id: 7 }, { col: 18, id: 8 },
+      { col: 19, id: 9 }, { col: 20, id: 10 }, { col: 21, id: 11 }, { col: 22, id: 12 },
+      { col: 23, id: 13 }, { col: 24, id: 14 }, { col: 25, id: 15 }, { col: 26, id: 16 },
+      { col: 27, id: 17 }, { col: 28, id: 18 },
+    ];
+
+    const excelData = {};
+    for (let i = startRow; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || !row[0]) continue;
+      const pc = String(row[0]).trim();
+      if (pc.startsWith('OF=') || pc.startsWith('NF=') || pc.startsWith('OP=') || pc.startsWith('NP=') ||
+          pc.startsWith('Nota') || pc.startsWith('EL PROMEDIO') || pc.startsWith('TOTAL') || pc.startsWith('SUMA')) break;
+      const fecha = excelSerialToDate(row[COL.FECHA]);
+      if (!fecha) continue;
+      if (!excelData[pc]) excelData[pc] = { paradas: {}, fecha, cliente: String(row[COL.CLIENTE] || '') };
+      PARADAS_MAP.forEach(p => {
+        let val = 0;
+        const raw = row[p.col];
+        if (typeof raw === 'number') val = raw;
+        else if (raw && raw.result) val = parseInt(raw.result) || 0;
+        excelData[pc].paradas[p.id] = (excelData[pc].paradas[p.id] || 0) + val;
+      });
+    }
+
+    // ── Obtener datos de DB ──
+    const [trabajos] = await pool.query(
+      `SELECT t.id, t.numero_pedido, t.fecha, t.maquina_id
+       FROM trabajos t WHERE t.maquina_id = ? AND t.fecha >= ? AND t.fecha <= ?`,
+      [maquina_id, '2026-05-01', '2026-05-31']
+    );
+
+    const [paradas] = await pool.query(
+      `SELECT pt.trabajo_id, pt.motivo_id, pt.minutos FROM paradas_trabajo pt
+       JOIN trabajos t ON pt.trabajo_id = t.id
+       WHERE t.maquina_id = ? AND t.fecha >= ? AND t.fecha <= ?`,
+      [maquina_id, '2026-05-01', '2026-05-31']
+    );
+
+    const parByTrabajo = {};
+    paradas.forEach(p => {
+      if (!parByTrabajo[p.trabajo_id]) parByTrabajo[p.trabajo_id] = {};
+      parByTrabajo[p.trabajo_id][p.motivo_id] = p.minutos;
+    });
+
+    const dbData = {};
+    trabajos.forEach(t => {
+      const key = t.numero_pedido;
+      if (!dbData[key]) dbData[key] = { paradas: {} };
+      const p = parByTrabajo[t.id] || {};
+      for (const [mid, min] of Object.entries(p)) {
+        dbData[key].paradas[mid] = (dbData[key].paradas[mid] || 0) + min;
+      }
+    });
+
+    // ── Comparar ──
+    const reporte = { maquina: maquinaNombre, total_excel: 0, total_db: 0, coinciden: 0, diferencias: [], solo_excel: [], solo_db: [] };
+    let totalEx = 0, totalDb = 0;
+
+    // Excel vs DB
+    for (const [pedido, ex] of Object.entries(excelData)) {
+      const exTotal = Object.values(ex.paradas).reduce((s, v) => s + v, 0);
+      totalEx += exTotal;
+      const db = dbData[pedido];
+      if (!db) { reporte.solo_excel.push({ pedido, total: exTotal }); continue; }
+      const dbTotal = Object.values(db.paradas).reduce((s, v) => s + v, 0);
+      totalDb += dbTotal;
+      if (exTotal !== dbTotal) {
+        const diffs = [];
+        for (let mid = 1; mid <= 18; mid++) {
+          const exV = ex.paradas[mid] || 0;
+          const dbV = db.paradas[mid] || 0;
+          if (exV !== dbV) diffs.push({ motivo_id: mid, excel: exV, db: dbV });
+        }
+        reporte.diferencias.push({ pedido, excel_total: exTotal, db_total: dbTotal, detalles: diffs });
+      } else {
+        reporte.coinciden++;
+      }
+    }
+    // Solo DB
+    for (const [pedido, db] of Object.entries(dbData)) {
+      if (!excelData[pedido]) {
+        const dbTotal = Object.values(db.paradas).reduce((s, v) => s + v, 0);
+        reporte.solo_db.push({ pedido, total: dbTotal });
+        totalDb += dbTotal;
+      }
+    }
+
+    reporte.total_excel = totalEx;
+    reporte.total_db = totalDb;
+    reporte.diferencia_min = totalEx - totalDb;
+    return reporte;
+  }
+
+  _validate(data) {

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth-provider";
 
 export default function RootLayout({
   children,
@@ -21,20 +22,22 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} bg-background text-foreground min-h-screen antialiased selection:bg-brand/30 selection:text-brand`}>
         <ThemeProvider>
-          <div className="relative">
-            {children}
-          </div>
-          <Toaster
-            richColors
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#020617',
-                border: '1px solid #1e293b',
-                color: '#e2e8f0',
-              },
-            }}
-          />
+          <AuthProvider>
+            <div className="relative">
+              {children}
+            </div>
+            <Toaster
+              richColors
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: '#020617',
+                  border: '1px solid #1e293b',
+                  color: '#e2e8f0',
+                },
+              }}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

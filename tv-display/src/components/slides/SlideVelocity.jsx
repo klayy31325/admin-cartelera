@@ -1,7 +1,4 @@
 import React from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
 import { Gauge } from 'lucide-react';
 
 const TARGETS = {
@@ -9,10 +6,9 @@ const TARGETS = {
   olympia: 88,
 };
 
-const NEEDLE_COLOR = '#f58300ff';
 const ARC_RED = '#ef4444';
 const ARC_ORANGE = '#f97316';
-const ARC_YELLOW = '#22ea08ff';
+const ARC_GREEN = '#10b981';
 
 export default function SlideVelocity({ data, maquina, maquina_id }) {
   const allBreakdown = data?.breakdown_velocidad ?? [];
@@ -24,7 +20,6 @@ export default function SlideVelocity({ data, maquina, maquina_id }) {
     ? { promedio_real: breakdown[0].avg_real }
     : data?.velocidad ?? { promedio_real: 0 };
 
-  const showChart = !maquina_id && breakdown.length > 0;
   const val = Number(globalStats.promedio_real) || 0;
   const maxSpeed = 100;
 
@@ -33,30 +28,28 @@ export default function SlideVelocity({ data, maquina, maquina_id }) {
 
   const isNovoflex = maquina?.toLowerCase().includes('novoflex');
   const isOlympia = maquina?.toLowerCase().includes('olympia');
-  const currentTarget = isNovoflex ? TARGETS.novoflex : isOlympia ? TARGETS.olympia : null;
+  const currentTarget = isNovoflex ? TARGETS.novoflex : isOlympia ? TARGETS.olympia : 80;
 
+  // Divisiones de colores más equilibradas según el objetivo
   let stop1, stop2;
   if (isNovoflex) {
-    stop1 = (50 / maxSpeed) * 100;
-    stop2 = (80 / maxSpeed) * 100;
+    stop1 = 40; // 0-40: Rojo
+    stop2 = 65; // 40-65: Naranja, 65-100: Verde (el objetivo es 75)
   } else if (isOlympia) {
-    stop1 = (40 / maxSpeed) * 100;
-    stop2 = (70 / maxSpeed) * 100;
+    stop1 = 50; // 0-50: Rojo
+    stop2 = 78; // 50-78: Naranja, 78-100: Verde (el objetivo es 88)
   } else {
-    stop1 = 35;
-    stop2 = 65;
+    stop1 = 45; // 0-45: Rojo
+    stop2 = 72; // 45-72: Naranja, 72-100: Verde (el objetivo es 80)
   }
-
-  const tickStyle = { fill: 'var(--col-text-muted)', fontSize: 10, fontWeight: 700 };
 
   return (
     <section
-      className={showChart ? 'slide-velocity--split' : ''}
       style={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        padding: maquina_id ? '12px 20px' : '24px',
+        padding: '20px 24px',
         boxSizing: 'border-box',
       }}
     >
@@ -66,145 +59,198 @@ export default function SlideVelocity({ data, maquina, maquina_id }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: maquina_id ? 32 : 0,
         width: '100%',
       }}>
-        {maquina_id && currentTarget != null && (
+        {maquina_id && (
           <div style={{
             flex: 1,
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
             background: 'var(--col-surface-md)',
-            borderRadius: 18,
-            padding: '14px 20px 12px',
-            boxShadow: '0 6px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
-            border: '1px solid var(--col-border)',
+            borderRadius: 24,
+            padding: '24px 32px',
+            boxShadow: 'var(--shadow-glass)',
+            border: '1px solid var(--col-border-lg)',
             overflow: 'hidden',
           }}>
-            <header style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 0 }}>
-              <Gauge size={20} strokeWidth={2.5} color={NEEDLE_COLOR} />
-              <h2 style={{ fontSize: 15, margin: 0, color: 'var(--col-text-primary)', fontWeight: 600 }}>
-                Velocidad Real · {maquina}
-              </h2>
+            {/* Header del Monitor */}
+            <header style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'var(--col-brand-dim)',
+                border: '1px solid var(--col-brand-glow)',
+              }}>
+                <Gauge size={22} strokeWidth={2.5} color="var(--col-brand)" />
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', margin: 0 }}>
+                  MONITOR DE RENDIMIENTO
+                </p>
+                <h2 style={{ fontSize: '18px', margin: 0, color: 'var(--col-text-primary)', fontWeight: 800, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                  Velocidad en Tiempo Real
+                </h2>
+              </div>
             </header>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', marginTop: -6 }}>
-              <svg viewBox="0 0 200 50" style={{ width: '100%', maxHeight: '60%', overflow: 'visible' }}>
-                <defs>
-                  <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={ARC_RED} />
-                    <stop offset={`${stop1 - 1}%`} stopColor={ARC_RED} />
-                    <stop offset={`${stop1 + 1}%`} stopColor={ARC_ORANGE} />
-                    <stop offset={`${stop2 - 1}%`} stopColor={ARC_ORANGE} />
-                    <stop offset={`${stop2 + 1}%`} stopColor={ARC_YELLOW} />
-                    <stop offset="100%" stopColor={ARC_YELLOW} />
-                  </linearGradient>
-                  <filter id="needleGlow">
-                    <feGaussianBlur stdDeviation="1.2" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
+            {/* Diseño en 2 columnas para TV */}
+            <div style={{
+              flex: 1,
+              display: 'grid',
+              gridTemplateColumns: '1.2fr 1fr',
+              gap: '40px',
+              alignItems: 'center',
+              minHeight: 0,
+            }}>
+              {/* Columna Izquierda: Gauge SVG e indicación de velocidad actual */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                width: '100%',
+              }}>
+                <svg viewBox="0 0 200 120" style={{ width: '100%', maxHeight: '200px', overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor={ARC_RED} />
+                      <stop offset={`${stop1 - 2}%`} stopColor={ARC_RED} />
+                      <stop offset={`${stop1 + 2}%`} stopColor={ARC_ORANGE} />
+                      <stop offset={`${stop2 - 2}%`} stopColor={ARC_ORANGE} />
+                      <stop offset={`${stop2 + 2}%`} stopColor={ARC_GREEN} />
+                      <stop offset="100%" stopColor={ARC_GREEN} />
+                    </linearGradient>
+                    <filter id="needleGlow">
+                      <feGaussianBlur stdDeviation="1.5" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
 
-                <path d="M 55 47 A 45 45 0 0 1 145 47" fill="none" stroke="url(#gaugeGradient)" strokeWidth="10" strokeLinecap="round" opacity="0.18" />
+                  {/* Arco del fondo (track) */}
+                  <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--col-gauge-track)" strokeWidth="12" strokeLinecap="round" />
 
-                {(() => {
-                  const ARC_LENGTH = 45 * Math.PI;
-                  const activeLen = ARC_LENGTH * (clampedVal / maxSpeed);
-                  return (
-                    <path
-                      d="M 55 47 A 45 45 0 0 1 145 47"
-                      fill="none"
-                      stroke="url(#gaugeGradient)"
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      strokeDasharray={`${activeLen} ${ARC_LENGTH}`}
-                      style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-                    />
-                  );
-                })()}
+                  {/* Arco activo con gradiente de color */}
+                  {(() => {
+                    const ARC_LENGTH = 80 * Math.PI;
+                    const activeLen = ARC_LENGTH * (clampedVal / maxSpeed);
+                    return (
+                      <path
+                        d="M 20 100 A 80 80 0 0 1 180 100"
+                        fill="none"
+                        stroke="url(#gaugeGradient)"
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        strokeDasharray={`${activeLen} ${ARC_LENGTH}`}
+                        style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                      />
+                    );
+                  })()}
 
-                <g style={{ transform: `translate(100px, 47px) rotate(${angle}deg)`, transition: 'transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-                  <polygon points="-1.5,-3 -1,-37 1,-37 1.5,-3" fill={NEEDLE_COLOR} filter="url(#needleGlow)" />
-                  <circle cx="0" cy="0" r="4" fill={NEEDLE_COLOR} />
-                  <circle cx="0" cy="0" r="1.5" fill="var(--col-surface-md)" />
-                </g>
+                  {/* Aguja indicadora */}
+                  <g style={{ transform: `translate(100px, 100px) rotate(${angle}deg)`, transition: 'transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+                    <polygon points="-2.5,-6 -1.5,-75 1.5,-75 2.5,-6" fill="var(--col-brand)" filter="url(#needleGlow)" />
+                    <circle cx="0" cy="0" r="5" fill="var(--col-brand)" />
+                    <circle cx="0" cy="0" r="2" fill="var(--col-surface-md)" />
+                  </g>
 
-                <text x="55" y="49" fill="var(--col-text-muted)" fontSize="7" fontFamily="monospace" textAnchor="middle" fontWeight="bold">0</text>
-                <text x="145" y="49" fill="var(--col-text-muted)" fontSize="7" fontFamily="monospace" textAnchor="middle" fontWeight="bold">{maxSpeed}</text>
-              </svg>
+                  {/* Ticks y leyendas */}
+                  <text x="20" y="118" fill="var(--col-text-muted)" fontSize="8" fontFamily="var(--font-mono)" textAnchor="middle" fontWeight="800">0</text>
+                  <text x="100" y="12" fill="var(--col-text-muted)" fontSize="8" fontFamily="var(--font-mono)" textAnchor="middle" fontWeight="800">50</text>
+                  <text x="180" y="118" fill="var(--col-text-muted)" fontSize="8" fontFamily="var(--font-mono)" textAnchor="middle" fontWeight="800">{maxSpeed}</text>
+                </svg>
 
-              <div style={{ marginTop: -12, display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span className="stat-number" style={{ fontSize: 40, color: NEEDLE_COLOR, lineHeight: 1, fontWeight: 800 }}>
+                {/* Valor numérico principal (color dinámico según tema) */}
+                <div style={{ marginTop: '-24px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
+                  <span className="stat-number" style={{ fontSize: '56px', fontWeight: 900, color: 'var(--col-text-primary)', lineHeight: 1, letterSpacing: '-0.02em' }}>
                     {val.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--col-text-muted)', fontWeight: 700 }}>m/min</span>
+                  <span style={{ fontSize: '11px', color: 'var(--col-text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>m/min</span>
                 </div>
               </div>
-            </div>
 
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid var(--col-border)', opacity: 0.5 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Objetivo
-              </span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontSize: 20, fontWeight: 900, color: NEEDLE_COLOR, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
-                  {currentTarget}
-                </span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--col-text-muted)' }}>m/min</span>
+              {/* Columna Derecha: Tarjetas de información */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', justifyContent: 'center' }}>
+                {/* Identificación de la Máquina */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    MÁQUINA / LÍNEA
+                  </span>
+                  <h2 style={{ fontSize: '28px', fontWeight: 900, color: 'var(--col-text-primary)', margin: 0, letterSpacing: '0.01em', textTransform: 'uppercase' }}>
+                    {maquina}
+                  </h2>
+                </div>
+
+                {/* Velocidad Objetivo */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    VELOCIDAD OBJETIVO
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span className="stat-number" style={{ fontSize: '36px', fontWeight: 900, color: 'var(--col-text-primary)', lineHeight: 1 }}>
+                      {currentTarget}
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--col-text-muted)' }}>m/min</span>
+                  </div>
+                </div>
+
+                {/* Desempeño */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--col-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    DESEMPEÑO GENERAL
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {(() => {
+                      const speedPercentage = currentTarget > 0 ? (val / currentTarget) * 100 : 0;
+                      let badgeBg = 'rgba(239, 68, 68, 0.15)';
+                      let badgeColor = '#ef4444';
+                      let badgeBorder = '1px solid rgba(239, 68, 68, 0.3)';
+                      let badgeText = 'BAJO OBJETIVO';
+
+                      if (speedPercentage >= 95) {
+                        badgeBg = 'rgba(16, 185, 129, 0.15)';
+                        badgeColor = '#10b981';
+                        badgeBorder = '1px solid rgba(16, 185, 129, 0.3)';
+                        badgeText = 'SISTEMA EFICIENTE';
+                      } else if (speedPercentage >= 75) {
+                        badgeBg = 'rgba(249, 115, 22, 0.15)';
+                        badgeColor = '#f97316';
+                        badgeBorder = '1px solid rgba(249, 115, 22, 0.3)';
+                        badgeText = 'NIVEL ACEPTABLE';
+                      }
+
+                      return (
+                        <>
+                          <div style={{
+                            padding: '6px 14px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: 900,
+                            letterSpacing: '0.06em',
+                            background: badgeBg,
+                            color: badgeColor,
+                            border: badgeBorder,
+                            textTransform: 'uppercase',
+                          }}>
+                            {badgeText}
+                          </div>
+                          <span className="stat-number" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--col-text-primary)' }}>
+                            {speedPercentage.toFixed(0)}%
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {!maquina_id && !showChart && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, justifyContent: 'center' }}>
-              <span style={{ color: NEEDLE_COLOR, fontSize: 64, fontWeight: 900 }}>{val.toFixed(1)}</span>
-              <span style={{ color: 'var(--col-text-muted)', fontSize: 24, fontWeight: 600 }}>m/min</span>
-            </div>
-            <p style={{ color: 'var(--col-text-muted)', textAlign: 'center', fontSize: 13, fontWeight: 600, letterSpacing: '0.05em' }}>
-              Velocidad Promedio
-            </p>
-          </div>
-        )}
-
-        {showChart && (
-          <div style={{ width: '100%', height: '100%', minHeight: 200 }}>
-            <h3 style={{ color: 'var(--col-text-primary)', fontSize: 16, marginBottom: 12, opacity: 0.8 }}>
-              Desglose por línea
-            </h3>
-            <div style={{ height: 'calc(100% - 30px)' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={breakdown} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--col-chart-grid)" />
-                  <XAxis
-                    dataKey="maquina_nombre"
-                    tick={tickStyle}
-                    axisLine={false}
-                    tickLine={false}
-                    hide={breakdown.length > 6}
-                    interval={0}
-                    height={breakdown.length > 6 ? 0 : 36}
-                  />
-                  <YAxis tick={tickStyle} axisLine={false} tickLine={false} width={36} />
-                  <Tooltip
-                    cursor={{ fill: 'var(--col-gauge-track)' }}
-                    contentStyle={{
-                      background: 'var(--col-surface-md)',
-                      border: '1px solid var(--col-border-lg)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                      color: 'var(--col-text-primary)',
-                    }}
-                  />
-                  <Bar dataKey="avg_real" name="Real" fill={NEEDLE_COLOR} radius={[4, 4, 0, 0]} barSize={28} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
           </div>
         )}

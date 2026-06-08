@@ -3,16 +3,16 @@
 // ============================================================
 const { Router } = require('express');
 const usuariosController = require('../controllers/usuarios.controller');
-const { verifyToken } = require('../middlewares/auth.middleware');
+const { verifyToken, authorize } = require('../middlewares/auth.middleware');
+const { ROLES } = require('../utils/constants');
 
 const router = Router();
 
 // ── CRUD de Usuarios ──
-// Todas las rutas protegidas con JWT excepto el registro
-router.post('/', usuariosController.create);                           // POST   /api/usuarios
-router.get('/', verifyToken, usuariosController.getAll);               // GET    /api/usuarios
-router.get('/:id', verifyToken, usuariosController.getById);           // GET    /api/usuarios/:id
-router.put('/:id', verifyToken, usuariosController.update);            // PUT    /api/usuarios/:id
-router.delete('/:id', verifyToken, usuariosController.delete);         // DELETE /api/usuarios/:id
+router.post('/', usuariosController.create);                           // POST   /api/usuarios  (público — registro desde login)
+router.get('/', verifyToken, authorize(ROLES.ADMIN), usuariosController.getAll);
+router.get('/:id', verifyToken, authorize(ROLES.ADMIN), usuariosController.getById);
+router.put('/:id', verifyToken, authorize(ROLES.ADMIN), usuariosController.update);
+router.delete('/:id', verifyToken, authorize(ROLES.ADMIN), usuariosController.delete);
 
 module.exports = router;

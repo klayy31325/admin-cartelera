@@ -2,19 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  // En un sistema real, aquí verificarías la sesión/JWT y el rol del usuario.
-  // Por ahora, permitimos el acceso pero dejamos el placeholder para la lógica de ADMIN.
-  
-  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
-  
-  if (isAdminPath) {
-    // Lógica de validación de rol 'ADMIN' iría aquí
-    console.log("Acceso a ruta de administración:", request.nextUrl.pathname);
+  const token = request.cookies.get("curex_token")?.value;
+  const { pathname } = request.nextUrl;
+
+  if (pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/admin") && !token) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

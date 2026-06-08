@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,40 +20,35 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/lib/api-config";
+import { useAuth } from "@/components/auth-provider";
 
-const menuItems = [
-  {
-    items: [
-      { name: "Panel de Control", href: "/admin", icon: LayoutDashboard },
-      { name: "Producción", href: "/admin/production", icon: ClipboardList },
-      { name: "Información Diaria", href: "/admin/informations", icon: Megaphone },
-      { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList },
-      { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings },
-    ]
-  },
+const allMenuItems = [
+  { name: "Panel de Control", href: "/admin", icon: LayoutDashboard, roles: ["admin", "editor", "operador", "visor"] },
+  { name: "Producción", href: "/admin/production", icon: ClipboardList, roles: ["admin", "editor", "operador"] },
+  { name: "Información Diaria", href: "/admin/informations", icon: Megaphone, roles: ["admin", "editor", "visor"] },
+  { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList, roles: ["admin", "editor", "visor"] },
+  { name: "Catálogos", href: "/admin/catalogs", icon: Database, roles: ["admin"] },
+  { name: "Logs del Sistema", href: "/admin/logs", icon: Activity, roles: ["admin", "visor"] },
+  { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings, roles: ["admin", "editor", "visor"] },
 ];
+
+const roleLabels: Record<string, string> = {
+  admin: "ADMINISTRADOR",
+  editor: "EDITOR",
+  operador: "OPERADOR",
+  visor: "VISOR",
+};
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ nombre: string; apellido: string } | null>(null);
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("curex_user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Error parsing user from localStorage:", error);
-      }
-    }
-  }, []);
+  const menuItems = allMenuItems.filter((item) => item.roles.includes(user?.rol ?? ""));
 
   return (
     <aside className="sidebar-dark-theme w-72 bg-zinc-950 border-r border-white/[0.03] flex flex-col h-screen sticky top-0 z-50 overflow-hidden">
-      {/* Glow Decorativo */}
       <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-transparent pointer-events-none opacity-100" />
 
-      {/* Area del Logo */}
       <div className="p-8 relative">
         <Link href="/admin/production" className="flex items-center gap-4 group">
           <div className="relative">
@@ -74,47 +68,34 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Navegación - Scrollbar oculto */}
-      <nav className="flex-1 px-4 py-2 space-y-10 overflow-y-auto overflow-x-hidden transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden relative">
-        {menuItems.map((group) => (
-          <div key={group.group} className="space-y-4">
-            <h2 className="px-4 text-[9px] font-black text-zinc-600 tracking-[0.3em] flex items-center gap-2">
-              <div className="h-[1px] w-4 bg-zinc-800" />
-              {group.group}
-            </h2>
-            <div className="space-y-1.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative overflow-hidden",
-                      isActive
-                        ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(184,115,51,0.03)]"
-                        : "text-zinc-500 hover:text-white hover:bg-white/[0.02]"
-                    )}
-                  >
-                    {isActive && (
-                      <div className="absolute left-0 top-1/4 h-1/2 w-[3px] bg-brand rounded-r-full shadow-[0_0_10px_rgba(184,115,51,1)]" />
-                    )}
-
-                    <Icon size={18} className={cn(
-                      "transition-all duration-300",
-                      isActive ? "text-brand scale-110 drop-shadow-[0_0_8px_rgba(184,115,51,0.3)]" : "group-hover:text-white"
-                    )} />
-                    <span className="relative z-10">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto overflow-x-hidden transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden relative">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative overflow-hidden",
+                isActive
+                  ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(184,115,51,0.03)]"
+                  : "text-zinc-500 hover:text-white hover:bg-white/[0.02]"
+              )}
+            >
+              {isActive && (
+                <div className="absolute left-0 top-1/4 h-1/2 w-[3px] bg-brand rounded-r-full shadow-[0_0_10px_rgba(184,115,51,1)]" />
+              )}
+              <Icon size={18} className={cn(
+                "transition-all duration-300",
+                isActive ? "text-brand scale-110 drop-shadow-[0_0_8px_rgba(184,115,51,0.3)]" : "group-hover:text-white"
+              )} />
+              <span className="relative z-10">{item.name}</span>
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Footer de Usuario */}
       <div className="p-5 border-t border-white/[0.03] bg-zinc-950">
         <div className="flex items-center justify-between gap-3 mb-2 px-1">
           <div className="flex items-center gap-3">
@@ -125,14 +106,14 @@ export function Sidebar() {
               <p className="text-[10px] font-black text-white uppercase tracking-tighter leading-none">
                 {user ? `${user.nombre} ${user.apellido}` : "Operador_01"}
               </p>
-              <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mt-1 block">Acceso Nivel 1</span>
+              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.2em] mt-1 block">
+                {user ? roleLabels[user.rol] || user.rol.toUpperCase() : "SIN ACCESO"}
+              </span>
             </div>
           </div>
-          <Link href="/">
-            <button className="p-2 rounded-lg bg-zinc-900 border border-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
-              <LogOut size={16} />
-            </button>
-          </Link>
+          <button onClick={logout} className="p-2 rounded-lg bg-zinc-900 border border-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>

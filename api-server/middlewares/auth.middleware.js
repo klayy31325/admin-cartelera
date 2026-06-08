@@ -9,6 +9,27 @@ const { HTTP_STATUS } = require('../utils/constants');
  * Middleware que protege rutas verificando el token JWT
  * enviado en el header Authorization: Bearer <token>
  */
+/**
+ * Middleware que autoriza el acceso según los roles permitidos.
+ * Debe usarse DESPUÉS de verifyToken.
+ * @param  {...string} roles Roles permitidos (e.g. 'admin', 'editor')
+ */
+function authorize(...allowedRoles) {
+  return (req, res, next) => {
+    try {
+      if (!req.user) {
+        throw new AppError('Acceso denegado. Usuario no autenticado.', HTTP_STATUS.UNAUTHORIZED);
+      }
+      if (!allowedRoles.includes(req.user.rol)) {
+        throw new AppError('No tienes permisos para acceder a este recurso.', HTTP_STATUS.FORBIDDEN);
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
 function verifyToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -43,4 +64,4 @@ function verifyToken(req, res, next) {
   }
 }
 
-module.exports = { verifyToken };
+module.exports = { verifyToken, authorize };

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Manrope } from "next/font/google";
 import { Sidebar } from "@/components/sidebar";
+import { useAuth } from "@/components/auth-provider";
 
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -12,23 +14,25 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
   const [bgIndex, setBgIndex] = useState(0);
   const backgrounds = ["/OLYMPIA.png", "/novoflex.png"];
-
   const [themeClass, setThemeClass] = useState("");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("curex_user");
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        if (user.empresa?.toLowerCase().includes("morrocel")) {
-          setThemeClass("theme-morrocel");
-        } else if (user.empresa?.toLowerCase().includes("curex")) {
-          setThemeClass("theme-curex");
-        }
-      } catch (error) {
-        console.error("Error parsing user for theme:", error);
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/");
+      return;
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (user) {
+      if (user.empresa?.toLowerCase().includes("morrocel")) {
+        setThemeClass("theme-morrocel");
+      } else if (user.empresa?.toLowerCase().includes("curex")) {
+        setThemeClass("theme-curex");
       }
     }
 
@@ -36,11 +40,20 @@ export default function AdminLayout({
       setBgIndex((prev) => (prev + 1) % backgrounds.length);
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
 
   return (
     <div className={`flex min-h-screen bg-background relative transition-colors duration-500 ${themeClass} ${manrope.className}`}>
-      {/* Background Alternante Ultra Fluido - Ahora visible en ambos temas con diferentes filtros */}
       <div className="fixed inset-0 z-0 overflow-hidden bg-background">
         {backgrounds.map((bg, index) => (
           <div
@@ -60,14 +73,10 @@ export default function AdminLayout({
             />
           </div>
         ))}
-        {/* Filtro Dinámico: Oscuro en Dark Mode, Grisáceo Transparente en Light Mode */}
         <div className="absolute inset-0 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-[2px] dark:backdrop-brightness-[0.2]" />
       </div>
 
-      {/* Barra Lateral estilo CUREX */}
       <Sidebar />
-
-      {/* Contenido Principal */}
       <main className="admin-readable flex-1 p-8 lg:p-8 overflow-y-auto relative z-10">
         <div className="max-w-7xl mx-auto">
           {children}

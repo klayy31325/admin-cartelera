@@ -2,45 +2,48 @@ const express = require('express');
 const router = express.Router();
 const produccionInformativaRepository = require('../repositories/produccion_informativa.repository');
 const { getIO } = require('../socket');
+const { verifyToken, authorize } = require('../middlewares/auth.middleware');
+const { ROLES } = require('../utils/constants');
+
+router.use(verifyToken);
 
 // Obtener todos los registros (default CUREX = 2)
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
     const data = await produccionInformativaRepository.findAll(2);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    next(err);
   }
 });
 
 // Obtener por empresa
-router.get('/empresa/:empresa_id', async (req, res) => {
+router.get('/empresa/:empresa_id', async (req, res, next) => {
   try {
     const data = await produccionInformativaRepository.findAll(req.params.empresa_id);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    next(err);
   }
 });
 
 // Obtener el siguiente número de orden disponible
-router.get('/next-orden', async (req, res) => {
+router.get('/next-orden', async (req, res, next) => {
   try {
     const empresa_id = req.query.empresa_id || 2;
     const maxOrden = await produccionInformativaRepository.getMaxOrden(Number(empresa_id));
     res.json({ success: true, data: { nextOrden: maxOrden + 1 } });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    next(err);
   }
 });
 
-// Crear nuevo registro
-router.post('/', async (req, res) => {
+// Crear nuevo registro (admin, editor)
+router.post('/', authorize(ROLES.ADMIN, ROLES.EDITOR), async (req, res, next) => {
   try {
     const newItem = await produccionInformativaRepository.create(req.body);
     res.status(201).json({ success: true, data: newItem });
 
-    // Emitir update
     try {
       getIO().emit('produccion-info-update', newItem);
     } catch (_) {}
@@ -50,13 +53,12 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Actualizar registro
-router.put('/:id', async (req, res) => {
+// Actualizar registro (admin, editor)
+router.put('/:id', authorize(ROLES.ADMIN, ROLES.EDITOR), async (req, res, next) => {
   try {
     const updated = await produccionInformativaRepository.update(req.params.id, req.body);
     res.json({ success: true, data: updated });
 
-    // Emitir update
     try {
       getIO().emit('produccion-info-update', updated);
     } catch (_) {}
@@ -66,18 +68,17 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Eliminar registro
-router.delete('/:id', async (req, res) => {
+// Eliminar registro (admin, editor)
+router.delete('/:id', authorize(ROLES.ADMIN, ROLES.EDITOR), async (req, res, next) => {
   try {
     await produccionInformativaRepository.delete(req.params.id);
     res.json({ success: true, message: 'Registro eliminado' });
 
-    // Emitir update
     try {
       getIO().emit('produccion-info-update', { id: req.params.id, deleted: true });
     } catch (_) {}
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    next(err);
   }
 });
 

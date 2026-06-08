@@ -10,6 +10,36 @@ import {
   Loader2
 } from 'lucide-react';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 100,
+      damping: 14
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -15,
+    scale: 0.97,
+    transition: { duration: 0.2 }
+  }
+};
+
 const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, onExitFocus }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [activeFocusIdx, setActiveFocusIdx] = useState(0);
@@ -26,7 +56,6 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
   const sortedItems = [...todayItems].sort((a, b) => {
     if (a.estado === 'completado' && b.estado !== 'completado') return 1;
     if (a.estado !== 'completado' && b.estado === 'completado') return -1;
-    // Criterio secundario: Orden numérico (ascendente)
     return (a.orden || 0) - (b.orden || 0);
   });
 
@@ -77,7 +106,6 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
       });
 
       if (response.ok) {
-        // Actualizar la caché de React Query inmediatamente para que se vea reflejado en la UI
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       }
     } catch (error) {
@@ -92,7 +120,6 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
     if (!isFocused || todayItems.length === 0) return;
 
     const handleKeyDown = (e) => {
-      // Ignorar si el usuario está enfocado en campos de texto de login
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
         return;
       }
@@ -109,7 +136,6 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
         if (activeFocusIdx < currentItemsCount - 1) {
           setActiveFocusIdx(activeFocusIdx + 1);
         } else {
-          // Último elemento de la página actual
           if (currentPage < pageCount - 1) {
             setCurrentPage(currentPage + 1);
             setActiveFocusIdx(0);
@@ -120,12 +146,10 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
         if (activeFocusIdx > 0) {
           setActiveFocusIdx(activeFocusIdx - 1);
         } else {
-          // Primer elemento de la página actual
           if (currentPage > 0) {
             setCurrentPage(currentPage - 1);
             setActiveFocusIdx(PAGE_SIZE - 1);
           } else {
-            // Salir hacia arriba (TopBar)
             if (onExitFocus) onExitFocus('up');
           }
         }
@@ -147,20 +171,19 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
   if (todayItems.length === 0) return <EmptyState maquina={maquina} />;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}>
-      {/* Contenedor con transición suave de opacidad */}
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ flex: 1, position: 'relative' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentPage}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            exit="exit"
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: 14,
             }}
           >
             {(() => {
@@ -184,24 +207,24 @@ const SlideProductionInfo = ({ data, isLoading, maquina, maquina_id, isFocused, 
         </AnimatePresence>
       </div>
 
-      {/* Paginador (Puntos indicadores) */}
+      {/* Paginador */}
       {pageCount > 1 && (
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 6,
-          paddingTop: 4,
+          gap: 8,
+          paddingTop: 8,
           zIndex: 10
         }}>
           {Array.from({ length: pageCount }).map((_, idx) => (
             <div
               key={idx}
               style={{
-                width: idx === currentPage ? 16 : 6,
-                height: 6,
-                borderRadius: 3,
-                background: idx === currentPage ? 'var(--col-brand)' : 'var(--col-border)',
+                width: idx === currentPage ? 20 : 8,
+                height: 8,
+                borderRadius: 4,
+                background: idx === currentPage ? 'var(--col-brand)' : 'var(--col-border-lg)',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             />
@@ -223,92 +246,100 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
     return `${day}/${month}/${year}`;
   })();
 
+  const borderLeftColor = isCompletado
+    ? 'var(--col-border)'
+    : isFirstActive
+      ? 'var(--col-brand)'
+      : 'var(--col-border-lg)';
+
+  const cardBackground = isCompletado
+    ? 'var(--col-surface)'
+    : isFirstActive
+      ? 'var(--col-brand-dim)'
+      : 'var(--col-surface-md)';
+
   return (
-    <div
+    <motion.div
+      variants={itemVariants}
       style={{
-        background: isCompletado
-          ? 'rgba(255,255,255,0.015)'
-          : isFirstActive
-            ? 'linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,140,0,0.05))'
-            : 'var(--col-surface-md)',
-        padding: '10px 18px',
-        borderRadius: 12,
+        background: cardBackground,
+        padding: '16px 22px',
+        borderRadius: 16,
         border: isFocused
           ? '2px solid var(--col-brand)'
-          : isFirstActive
-            ? '1px solid rgba(255,165,0,0.35)'
-            : '1px solid var(--col-border)',
+          : '1px solid var(--col-border)',
+        borderLeft: `6px solid ${isFocused ? 'var(--col-brand)' : borderLeftColor}`,
         boxShadow: isFocused
-          ? '0 0 20px var(--col-brand-glow)'
+          ? '0 8px 24px var(--col-brand-glow)'
           : isFirstActive
-            ? '0 0 12px rgba(255,165,0,0.15)'
-            : '0 2px 12px rgba(0, 0, 0, 0.05)',
+            ? '0 4px 16px rgba(249, 115, 22, 0.12)'
+            : '0 4px 14px rgba(0, 0, 0, 0.04)',
         display: 'flex',
         alignItems: 'center',
-        gap: 16,
+        gap: 20,
         position: 'relative',
         overflow: 'hidden',
-        opacity: isCompletado ? 0.4 : 1,
-        filter: isCompletado ? 'grayscale(0.9)' : 'none',
-        minHeight: '64px',
-        transform: isFocused ? 'scale(1.03)' : 'scale(1)',
-        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isCompletado ? 0.45 : 1,
+        filter: isCompletado ? 'grayscale(0.8)' : 'none',
+        minHeight: '82px',
+        transform: isFocused ? 'scale(1.02)' : 'scale(1)',
+        transition: 'border 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s',
       }}
     >
+      {/* Fecha superior derecha */}
       <div
         style={{
           position: 'absolute',
           top: 6,
-          right: 8,
-          fontSize: '7px',
-          fontWeight: 900,
-          letterSpacing: '0.10em',
+          right: 12,
+          fontSize: '9px',
+          fontWeight: 800,
+          letterSpacing: '0.08em',
           textTransform: 'uppercase',
-          padding: '3px 22px',
-          borderRadius: 6,
-
-          zIndex: 2,
           color: 'var(--col-text-muted)',
+          opacity: 0.8,
         }}
-        title={`Fecha asignada: ${formattedFecha}`}
       >
         {formattedFecha}
       </div>
 
+      {/* Número de Orden */}
       <div
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
+          width: 42,
+          height: 42,
+          borderRadius: 12,
           background: isFirstActive
-            ? 'rgba(255,165,0,0.2)'
+            ? 'var(--col-brand)'
             : 'var(--col-gauge-track)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '13px',
+          fontSize: '18px',
           fontWeight: 900,
-          color: isFirstActive ? '#ff8c00' : 'var(--col-brand)',
+          color: isFirstActive ? '#ffffff' : 'var(--col-text-primary)',
           flexShrink: 0,
+          boxShadow: isFirstActive ? '0 4px 12px var(--col-brand-glow)' : 'none',
         }}
       >
         {item.orden || '-'}
       </div>
 
-      {/* Tarea Principal */}
+      {/* Contenido de la Tarea */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <h3
           style={{
-            fontSize: item.tarea.length > 100 ? '11px' : item.tarea.length > 50 ? '12px' : '13px',
-            fontWeight: 900,
+            fontSize: '18px',
+            fontWeight: 800,
             color: 'var(--col-text-primary)',
             textTransform: 'uppercase',
-            lineHeight: 1.2,
+            lineHeight: 1.25,
             wordBreak: 'break-word',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
+            margin: 0,
           }}
         >
           {item.tarea}
@@ -316,9 +347,9 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
         {item.descripcion_secundaria && (
           <p
             style={{
-              fontSize: '11px',
+              fontSize: '13px',
               fontWeight: 600,
-              color: 'var(--col-text-muted)',
+              color: 'var(--col-text-secondary)',
               marginTop: 4,
               lineHeight: 1.3,
               wordBreak: 'break-word',
@@ -326,6 +357,7 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
+              margin: '4px 0 0',
             }}
           >
             {item.descripcion_secundaria}
@@ -334,23 +366,23 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
       </div>
 
       {/* Meta y Estado */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
         {item.meta_valor && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              background: 'rgba(184, 115, 51, 0.04)',
-              padding: '6px 12px',
-              borderRadius: 8,
-              border: '1px solid rgba(184, 115, 51, 0.08)',
+              gap: 8,
+              background: 'var(--col-brand-dim)',
+              padding: '8px 14px',
+              borderRadius: 10,
+              border: '1px solid var(--col-brand-glow)',
             }}
           >
-            <Target size={11} color={'var(--col-brand)'} />
+            <Target size={14} color={'var(--col-brand)'} />
             <span
               style={{
-                fontSize: '11px',
+                fontSize: '13px',
                 fontWeight: 900,
                 color: 'var(--col-text-primary)',
               }}
@@ -360,7 +392,7 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
           </div>
         )}
 
-        <div style={{ minWidth: 80 }}>
+        <div style={{ minWidth: 110 }}>
           <StatusBadge
             status={item.estado}
             isFocused={isFocused}
@@ -368,7 +400,7 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
           />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -395,38 +427,35 @@ const StatusBadge = ({ status, isFocused, onClick }) => {
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
-      aria-label={`Cambiar estado actual: ${config.label}`}
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 5,
+        gap: 6,
         color: config.color,
         cursor: 'pointer',
         background: isFocused
-          ? 'rgba(255, 255, 255, 0.28)'
+          ? 'var(--col-brand-dim)'
           : 'var(--col-gauge-track)',
-        padding: '6px 10px',
-        borderRadius: 6,
+        padding: '8px 14px',
+        borderRadius: 10,
         border: isFocused
-          ? '1px solid #ffffff'
+          ? '2px solid var(--col-brand)'
           : `1px solid var(--col-border)`,
         transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'scale(1.03)';
-        e.currentTarget.style.background = 'var(--col-gauge-track)';
         e.currentTarget.style.borderColor = 'var(--col-brand)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.background = 'var(--col-gauge-track)';
-        e.currentTarget.style.borderColor = 'var(--col-border)';
+        e.currentTarget.style.borderColor = isFocused ? 'var(--col-brand)' : 'var(--col-border)';
       }}
     >
-      <Icon size={10} className={status === 'en_progreso' ? 'animate-spin' : ''} />
-      <span style={{ fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <Icon size={12} className={status === 'en_progreso' ? 'animate-spin' : ''} />
+      <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {config.label}
       </span>
     </div>
@@ -435,22 +464,21 @@ const StatusBadge = ({ status, isFocused, onClick }) => {
 
 const LoadingState = () => (
   <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 20 }}>
-    <div style={{ width: 32, height: 32, border: '2px solid var(--col-border)', borderTopColor: 'var(--col-brand)', borderRadius: '50%' }} className="animate-spin" />
-    <p style={{ color: 'var(--col-text-muted)', fontWeight: 800, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Sincronizando Planificación...</p>
+    <div style={{ width: 36, height: 36, border: '3px solid var(--col-border)', borderTopColor: 'var(--col-brand)', borderRadius: '50%' }} className="animate-spin" />
+    <p style={{ color: 'var(--col-text-muted)', fontWeight: 800, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Sincronizando Planificación...</p>
   </div>
 );
 
 const EmptyState = ({ maquina }) => (
-  <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
-    <div style={{ padding: 18, background: 'var(--col-glass)', borderRadius: '50%', border: '1px solid var(--col-border)' }}>
-      <ClipboardList size={36} color="var(--col-border)" />
+  <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 20 }}>
+    <div style={{ padding: 24, background: 'var(--col-brand-dim)', borderRadius: '50%', border: '1px solid var(--col-brand-glow)' }}>
+      <ClipboardList size={48} color="var(--col-brand)" />
     </div>
     <div style={{ textAlign: 'center' }}>
-      <h3 style={{ fontSize: 15, fontWeight: 900, color: 'var(--col-text)', textTransform: 'uppercase' }}>Sin tareas para hoy</h3>
-      <p style={{ color: 'var(--col-text-muted)', fontWeight: 600, fontSize: 11, marginTop: 4 }}>No se han asignado metas específicas para {maquina || 'la planta'} en este periodo.</p>
+      <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--col-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sin tareas para hoy</h3>
+      <p style={{ color: 'var(--col-text-muted)', fontWeight: 600, fontSize: '13px', marginTop: 6, maxWidth: '400px' }}>No se han asignado metas específicas para {maquina || 'la planta'} en este periodo.</p>
     </div>
   </div>
 );
 
 export default SlideProductionInfo;
-

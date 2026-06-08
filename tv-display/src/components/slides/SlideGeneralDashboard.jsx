@@ -3,77 +3,77 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = ['var(--col-brand)', 'var(--col-warn)', 'var(--col-danger)', 'var(--col-info)', 'var(--col-text-muted)'];
 
-function DesperdicioCard({ label, pct, limit, rawValue, unit, isMonthly }) {
+function DesperdicioCard({ label, pct, limit, rawValue, unit }) {
   const pctNum = Number(pct);
   const isOverLimit = pctNum > limit;
   const barPct = Math.min(pctNum, 100);
   const barColor = isOverLimit ? '#ef4444' : '#22c55e';
-  const glowColor = isOverLimit ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)';
+  const alertBg = 'transparent';
+  const alertBorder = isOverLimit ? 'rgba(239,68,68,0.5)' : 'var(--col-border)';
 
   return (
-    <div className="tv-kpi tv-kpi--neutral" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 18px' }}>
+    <motion.div
+      animate={isOverLimit ? { borderColor: ['rgba(239,68,68,0.5)', 'rgba(239,68,68,0.8)', 'rgba(239,68,68,0.5)'] } : {}}
+      transition={isOverLimit ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+      className="tv-kpi tv-kpi--neutral"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 14px',
+        background: alertBg, border: `1px solid ${alertBorder}`,
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <p className="tv-kpi__label">{label}</p>
-          <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--col-text-muted)', marginTop: 0, letterSpacing: '0.05em' }}>
-            (Límite de alerta: {limit}%)
-          </p>
-        </div>
-        {isOverLimit && (
-          <div style={{ color: '#ef4444', fontSize: '18px', lineHeight: 1, flexShrink: 0, marginTop: -2 }}>
-            ⚠
-          </div>
-        )}
+        <p style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--col-text-muted)', margin: 0 }}>
+          {label}
+          <span style={{ fontSize: '9px', fontWeight: 600, marginLeft: 6, opacity: 0.5, color: 'var(--col-text-muted)' }}>
+            (límite {limit}%)
+          </span>
+        </p>
       </div>
 
-      <p className="stat-number" style={{ fontSize: '34px', fontWeight: 900, color: 'var(--col-text-primary)', lineHeight: 1.1, margin: 0 }}>
+      <p
+        className="stat-number"
+        style={{ fontSize: '34px', fontWeight: 900, color: 'var(--col-text-primary)', lineHeight: 1.1, margin: 0 }}
+      >
         {pctNum.toFixed(2)}%
       </p>
 
-      <div style={{
-        width: '100%',
-        height: 8,
-        borderRadius: 4,
-        background: 'var(--col-gauge-track)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: `${barPct}%`,
-          height: '100%',
-          borderRadius: 4,
-          background: barColor,
-          transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: isOverLimit ? `0 0 10px ${glowColor}` : 'none',
-        }} />
+      <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'var(--col-gauge-track)', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${barPct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          style={{ height: '100%', borderRadius: 3, background: barColor, boxShadow: isOverLimit ? `0 0 8px ${barColor}` : 'none' }}
+        />
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: isOverLimit ? '#ef4444' : '#22c55e', letterSpacing: '0.04em' }}>
-          {isOverLimit ? `▲ Excede límite de ${limit}%` : `✓ Dentro del límite de ${limit}%`}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 1 }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, color: barColor }}>
+          {isOverLimit ? `▲ Excede ${limit}%` : '✓ OK'}
         </span>
-        <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--col-text-muted)', fontFamily: 'var(--font-mono)' }}>
+        <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--col-text-muted)', fontFamily: 'var(--font-mono)' }}>
           {rawValue} {unit}
         </span>
       </div>
+    </motion.div>
+  );
+}
+
+function TechKpi({ variant, label, value, unit, subtext }) {
+  return (
+    <div className={`tv-kpi tv-kpi--${variant}`} style={{ display: 'flex', flexDirection: 'column' }}>
+      <p className="tv-kpi__label">{label}</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 8 }}>
+        <p className="stat-number tv-kpi__value">{value}</p>
+        <span className="tv-kpi__unit">{unit}</span>
+      </div>
+      {subtext && (
+        <div style={{ fontSize: '16px', fontWeight: 900, opacity: 0.85, marginTop: '8px', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+          {subtext}
+        </div>
+      )}
     </div>
   );
 }
-return (
-  <div className={`tv-kpi tv-kpi--${variant}`} style={{ display: 'flex', flexDirection: 'column' }}>
-    <p className="tv-kpi__label">{label}</p>
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 8 }}>
-      <p className="stat-number tv-kpi__value">{value}</p>
-      <span className="tv-kpi__unit">{unit}</span>
-    </div>
-    {subtext && (
-      <div style={{ fontSize: '16px', fontWeight: 900, opacity: 0.85, marginTop: '8px', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
-        {subtext}
-      </div>
-    )}
-  </div>
-);
-
 
 export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maquina, maquina_id }) {
   const allProduccion = data?.produccion ?? [];
@@ -139,7 +139,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
         <div
           style={{
             position: 'absolute',
-            top: -17,
+            top: -12,
             left: 0,
             right: 0,
             display: 'flex',
@@ -151,16 +151,16 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
             style={{
               background: 'var(--col-warn)',
               color: '#1a1a2e',
-              fontSize: '9px',
+              fontSize: '8px',
               fontWeight: 900,
-              padding: '3px 14px',
-              borderRadius: '0 0 6px 6px',
+              padding: '2px 12px',
+              borderRadius: '0 0 4px 4px',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               fontFamily: 'var(--font-mono)',
             }}
           >
-            ⚡ DATOS DE MES ANTERIOR — MES ACTUAL SIN REGISTROS
+            ⚡ MES ANTERIOR
           </span>
         </div>
       )}
@@ -172,19 +172,19 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
           unit="m"
           variant="primary"
         />
-        <TechKpi
-          label={isMonthly ? 'DESPERDICIO MENSUAL (M/L)' : 'DESPERDICIO (M/L)'}
-          value={pctMl}
-          unit="%"
-          variant="neutral"
-          subtext={`${Number(desperdicio.total_ml ?? 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m/l`}
+        <DesperdicioCard
+          label={isMonthly ? 'DESP. (M/L)' : 'DESPERDICIO (M/L)'}
+          pct={pctMl}
+          limit={8}
+          rawValue={`${Number(desperdicio.total_ml ?? 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+          unit="m/l"
         />
-        <TechKpi
-          label={isMonthly ? 'DESPERDICIO MENSUAL KG' : 'DESPERDICIO'}
-          value={pctKgTotal.toFixed(2)}
-          unit="%"
-          variant="neutral"
-          subtext={`${Number(desperdicio.total_kg ?? 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KG`}
+        <DesperdicioCard
+          label={isMonthly ? 'DESP. KG' : 'DESPERDICIO KG'}
+          pct={pctKgTotal}
+          limit={8}
+          rawValue={`${Number(desperdicio.total_kg ?? 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+          unit="KG"
         />
       </div>
 
@@ -194,7 +194,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
         )}
 
         <header className="slide-general__chart-header">
-          <h2>{isMonthly ? 'PARADAS MENSUAL' : 'PARADAS'}</h2>
+          <h2>{isMonthly ? 'PARADAS' : 'PARADAS'}</h2>
         </header>
 
         <div className="slide-general__chart-body">
@@ -243,17 +243,16 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
 
               </AnimatePresence>
 
-              {/* Indicators */}
               {totalPages > 1 && (
                 <div
                   style={{
                     position: 'absolute',
-                    bottom: -0,
+                    bottom: 0,
                     left: 0,
                     right: 0,
                     display: 'flex',
                     justifyContent: 'center',
-                    gap: 6,
+                    gap: 4,
                     zIndex: 10,
                   }}
                 >
@@ -261,9 +260,9 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
                     <div
                       key={idx}
                       style={{
-                        width: idx === currentPage ? 12 : 6,
-                        height: 6,
-                        borderRadius: 3,
+                        width: idx === currentPage ? 10 : 4,
+                        height: 4,
+                        borderRadius: 2,
                         background: idx === currentPage ? 'var(--col-brand)' : 'var(--col-text-muted)',
                         opacity: idx === currentPage ? 1 : 0.4,
                         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
