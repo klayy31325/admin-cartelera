@@ -3,6 +3,42 @@
 // ============================================================
 const { pool } = require('../config/db');
 
+// Parche global: undefined → null en TODOS los parámetros SQL
+function sanitizeParams(params) {
+  if (params && Array.isArray(params)) {
+    const hasUndefined = params.some(p => p === undefined);
+    if (hasUndefined) {
+      console.error('⚠️ sanitizeParams encontró undefined:', params);
+      console.error(new Error().stack);
+    }
+    return params.map(p => p === undefined ? null : p);
+  }
+  return params;
+}
+function sanitizeParamsDeep(params, depth = 0) {
+  if (params && Array.isArray(params)) {
+    const check = (arr) => arr.some(p => Array.isArray(p) ? check(p) : p === undefined);
+    if (check(params)) {
+      console.error('⚠️ sanitizeParamsDeep encontró undefined en depth', depth, ':', JSON.stringify(params));
+    }
+    return params.map(p => Array.isArray(p) ? sanitizeParamsDeep(p, depth + 1) : (p === undefined ? null : p));
+  }
+  return params;
+}
+const origExecute = pool.execute.bind(pool);
+pool.execute = (sql, params, opts) => origExecute(sql, sanitizeParams(params), opts);
+const origQuery = pool.query.bind(pool);
+pool.query = (sql, params, opts) => origQuery(sql, sanitizeParamsDeep(params), opts);
+const origGetConn = pool.getConnection.bind(pool);
+pool.getConnection = async () => {
+  const conn = await origGetConn();
+  const origConnExec = conn.execute.bind(conn);
+  conn.execute = (sql, params, opts) => origConnExec(sql, sanitizeParams(params), opts);
+  const origConnQuery = conn.query.bind(conn);
+  conn.query = (sql, params, opts) => origConnQuery(sql, sanitizeParamsDeep(params), opts);
+  return conn;
+};
+
 // Mapeo: columna del Excel (índice) → motivo_id fijo en motivos_parada
 const MOTIVOS_EXCEL_MAP = [
   { col: 11, id: 1  }, // PREPARACION
@@ -24,6 +60,11 @@ const MOTIVOS_EXCEL_MAP = [
   { col: 27, id: 17 }, // RRHH
   { col: 28, id: 18 }, // FALTA DE INSUMO / PEDIDO
 ];
+
+// ─── Sanitizador de parámetros SQL ─────────────────────────────────────────
+function sqlParams(...args) {
+  return args.map(a => a === undefined ? null : a);
+}
 
 // ─── Catálogos auxiliares ──────────────────────────────────────────────────
 
@@ -105,10 +146,11 @@ class TrabajosRepository {
   /**
    * Crea un trabajo y sus paradas, velocidad y desperdicio dentro de una transacción.
    */
-  async create(data, paradasMinutos, velocidadData = null, desperdicioData = null) {
-    const conn = await pool.getConnection();
+  async create(data, paradasMinutos, velocidadData = null, desperdicioData = null, options = {}) {
+    const conn = options.connection || await pool.getConnection();
+    const ownsTransaction = !options.connection;
     try {
-      await conn.beginTransaction();
+      if (ownsTransaction) await conn.beginTransaction();
 
       // Resolver FKs de catálogo
       const cliente_id  = await getOrCreateCliente(conn, data.cliente);
@@ -123,15 +165,15 @@ class TrabajosRepository {
            tiempo_produccion_min, tiempo_parada_total_min, tiempo_total_min,
            parada_limpieza_min, parada_pruebas_min, parada_insumo_min, observaciones)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
+        sqlParams(
           data.maquina_id, cliente_id, producto_id, destino_id, estado_id,
           data.numero_pedido, data.fecha, data.meta_kg || 0,
           data.produccion_kg || null, data.metros_producidos || 0,
           data.tiempo_produccion_min || 0,
           data.tiempo_parada_total_min || 0, data.tiempo_total_min || 0,
           data.parada_limpieza_min || 0, data.parada_pruebas_min || 0, data.parada_insumo_min || 0,
-          data.observaciones || null,
-        ]
+          data.observaciones || null
+        )
       );
 
       const trabajo_id = result.insertId;
@@ -150,7 +192,7 @@ class TrabajosRepository {
         await conn.execute(
           `INSERT INTO velocidad (maquina_id, trabajo_id, turno_id, fecha, velocidad_teorica_mlmin, velocidad_real_mlmin)
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [data.maquina_id, trabajo_id, turno_id, data.fecha, velocidadData.teorica, velocidadData.real]
+          sqlParams(data.maquina_id, trabajo_id, turno_id, data.fecha, velocidadData.teorica, velocidadData.real)
         );
       }
 
@@ -159,25 +201,54 @@ class TrabajosRepository {
         await conn.execute(
           `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
+          sqlParams(
             data.maquina_id, trabajo_id, 
             desperdicioData.kg_film || 0,
             desperdicioData.ml_film || 0,
             desperdicioData.porcentaje_kg || null,
-            `Manual: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
+            `Manual: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}`,
             data.fecha
-          ]
+          )
         );
       }
 
-      await conn.commit();
+      if (ownsTransaction) await conn.commit();
       return { id: trabajo_id, ...data, cliente_id, producto_id };
     } catch (err) {
-      await conn.rollback();
+      if (ownsTransaction) await conn.rollback();
       throw err;
     } finally {
-      conn.release();
+      if (ownsTransaction) conn.release();
     }
+  }
+
+  /**
+   * Lista trabajos por máquina y rango de fechas.
+   * Usado por verifyExcel en el servicio.
+   */
+  async findByMaquinaYPeriodo(maquina_id, fecha_inicio, fecha_fin) {
+    const [rows] = await pool.query(
+      `SELECT t.id, t.numero_pedido, t.fecha, t.maquina_id
+       FROM trabajos t
+       WHERE t.maquina_id = ? AND t.fecha >= ? AND t.fecha <= ?`,
+      [maquina_id, fecha_inicio, fecha_fin]
+    );
+    return rows;
+  }
+
+  /**
+   * Lista minutos de paradas por trabajo para una máquina y período.
+   * Usado por verifyExcel en el servicio.
+   */
+  async findParadasByMaquinaYPeriodo(maquina_id, fecha_inicio, fecha_fin) {
+    const [rows] = await pool.query(
+      `SELECT pt.trabajo_id, pt.motivo_id, pt.minutos
+       FROM paradas_trabajo pt
+       JOIN trabajos t ON pt.trabajo_id = t.id
+       WHERE t.maquina_id = ? AND t.fecha >= ? AND t.fecha <= ?`,
+      [maquina_id, fecha_inicio, fecha_fin]
+    );
+    return rows;
   }
 
   /**
@@ -188,13 +259,13 @@ class TrabajosRepository {
       'SELECT id FROM trabajos WHERE numero_pedido = ? AND maquina_id = ? AND fecha = ?',
       [numero_pedido, maquina_id, fecha]
     );
-    return rows.length > 0 ? rows[0].id : null;
+    return rows.length > 0 ? rows[0] : null;
   }
 
   /**
    * Listar trabajos con JOINs completos para mostrar nombres normalizados
    */
-  async findAll({ maquina_id, fecha_inicio, fecha_fin, estado_id } = {}) {
+  async findAll({ maquina_id, fecha_inicio, fecha_fin, estado_id, status_orden } = {}) {
     let query = `
       SELECT
         t.id, t.numero_pedido, t.fecha, t.meta_kg, t.metros_producidos,
@@ -219,6 +290,7 @@ class TrabajosRepository {
     if (fecha_inicio) { query += ' AND t.fecha >= ?';       params.push(fecha_inicio); }
     if (fecha_fin)    { query += ' AND t.fecha <= ?';       params.push(fecha_fin); }
     if (estado_id)    { query += ' AND t.estado_id = ?';    params.push(estado_id); }
+    if (status_orden) { query += ' AND UPPER(TRIM(e.nombre)) = ?'; params.push(String(status_orden).trim().toUpperCase()); }
 
     query += ' ORDER BY t.fecha DESC, t.created_at DESC';
 
@@ -327,10 +399,11 @@ class TrabajosRepository {
   /**
    * Actualizar un trabajo con paradas, velocidad y desperdicio
    */
-  async update(id, data, paradasMinutos, velocidadData = null, desperdicioData = null) {
-    const conn = await pool.getConnection();
+  async update(id, data, paradasMinutos, velocidadData = null, desperdicioData = null, options = {}) {
+    const conn = options.connection || await pool.getConnection();
+    const ownsTransaction = !options.connection;
     try {
-      await conn.beginTransaction();
+      if (ownsTransaction) await conn.beginTransaction();
 
       const cliente_id  = await getOrCreateCliente(conn, data.cliente);
       const producto_id = await getOrCreateProducto(conn, data.producto, cliente_id);
@@ -367,7 +440,7 @@ class TrabajosRepository {
 
       await conn.execute(
         `UPDATE trabajos SET ${setCols.join(', ')} WHERE id=?`,
-        setVals
+        sqlParams(...setVals)
       );
 
       // Paradas: Limpiar y re-insertar
@@ -386,7 +459,7 @@ class TrabajosRepository {
         await conn.execute(
           `INSERT INTO velocidad (maquina_id, trabajo_id, turno_id, fecha, velocidad_teorica_mlmin, velocidad_real_mlmin)
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [data.maquina_id, id, turno_id, data.fecha, velocidadData.teorica, velocidadData.real]
+          sqlParams(data.maquina_id, id, turno_id, data.fecha, velocidadData.teorica, velocidadData.real)
         );
       }
 
@@ -397,25 +470,25 @@ class TrabajosRepository {
           await conn.execute(
             `INSERT INTO desperdicios (maquina_id, trabajo_id, cantidad_kg, cantidad_ml, porcentaje_kg, comentario, fecha)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
+            sqlParams(
               data.maquina_id, id, 
               desperdicioData.kg_film || 0,
               desperdicioData.ml_film || 0,
               desperdicioData.porcentaje_kg || null,
-              `Manual Update: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}, Solvente ${desperdicioData.solvente_lts}lts`,
+              `Manual Update: Film ${desperdicioData.kg_film}kg, Tinta ${desperdicioData.tinta_kg}kg, m/l ${desperdicioData.ml_film}`,
               data.fecha
-            ]
+            )
           );
         }
       }
 
-      await conn.commit();
+      if (ownsTransaction) await conn.commit();
       return { id, ...data };
     } catch (err) {
-      await conn.rollback();
+      if (ownsTransaction) await conn.rollback();
       throw err;
     } finally {
-      conn.release();
+      if (ownsTransaction) conn.release();
     }
   }
 

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE_URL } from "@/lib/api-config";
+import { useAuth } from "@/components/auth-provider";
 
 interface ProduccionInfo {
   id: number;
@@ -44,6 +45,7 @@ interface ProduccionInfoFormData {
 }
 
 export function ProduccionInformativaManager() {
+  const { canEdit } = useAuth();
   const [items, setItems] = useState<ProduccionInfo[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -55,10 +57,11 @@ export function ProduccionInformativaManager() {
   const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
   const [editingInlineValue, setEditingInlineValue] = useState<string>('');
 
-  // Estados para paginación y filtros de historial
+  // Estados para paginación y filtros
   const [activeTab, setActiveTab] = useState<'activas' | 'historial'>('activas');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+  const [filtroMaquina, setFiltroMaquina] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
 
@@ -67,7 +70,7 @@ export function ProduccionInformativaManager() {
     setCurrentPage(1);
     setSelectedIds([]);
     setSelectionMode(false);
-  }, [activeTab, fechaDesde, fechaHasta]);
+  }, [activeTab, filtroMaquina, fechaDesde, fechaHasta]);
 
   // Estados para el Modal de Confirmación
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -86,6 +89,7 @@ export function ProduccionInformativaManager() {
   // Filtrado y Paginación derivados
   const filteredItems = items.filter(item => {
     const isCompleted = item.estado === 'completado';
+    if (filtroMaquina && item.maquina_id !== Number(filtroMaquina)) return false;
     if (activeTab === 'activas') {
       return !isCompleted;
     } else {
@@ -122,10 +126,11 @@ export function ProduccionInformativaManager() {
     }
   };
 
-  const fetchNextOrden = async () => {
+  const fetchNextOrden = async (maquinaId?: string) => {
+    if (!maquinaId) return;
     try {
       const token = localStorage.getItem("curex_token");
-      const response = await fetch(`${API_BASE_URL}/produccion-informativa/next-orden`, {
+      const response = await fetch(`${API_BASE_URL}/produccion-informativa/next-orden?maquina_id=${maquinaId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
@@ -135,7 +140,9 @@ export function ProduccionInformativaManager() {
         }
       }
     } catch {
-      const maxOrden = items.reduce((max, i) => Math.max(max, i.orden || 0), 0);
+      const maxOrden = items
+        .filter(i => i.maquina_id === Number(maquinaId))
+        .reduce((max, i) => Math.max(max, i.orden || 0), 0);
       setFormData((prev) => ({ ...prev, orden: String(maxOrden + 1) }));
     }
   };
@@ -413,26 +420,28 @@ export function ProduccionInformativaManager() {
         {/* Selection Button */}
         <div className="flex flex-wrap items-center gap-3">
 
-          <Button
-            onClick={() => {
-              const opening = !isAdding;
-              setIsAdding(opening);
-              setOrdenError(null);
-              if (opening) {
-                setEditingId(null);
-                fetchNextOrden();
-              }
-            }}
-            className={cn(
-              "h-10 px-8 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl",
-              isAdding ? "bg-zinc-100 text-zinc-500 dark:bg-white/5" : "bg-brand text-white hover:scale-105 shadow-brand/20"
-            )}
-          >
-            {isAdding ? <X className="mr-2" size={5} /> : <Plus className="mr-2" size={5} />}
-            {isAdding ? "Cerrar Panel" : "GENERAR TAREA"}
-          </Button>
+          {canEdit && (
+            <Button
+              onClick={() => {
+                const opening = !isAdding;
+                setIsAdding(opening);
+                setOrdenError(null);
+                if (opening) {
+                  setEditingId(null);
+                  setFormData((prev) => ({ ...prev, orden: '' }));
+                }
+              }}
+              className={cn(
+                "h-10 px-8 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl",
+                isAdding ? "bg-zinc-100 text-zinc-500 dark:bg-white/5" : "bg-brand text-white hover:scale-105 shadow-brand/20"
+              )}
+            >
+              {isAdding ? <X className="mr-2" size={5} /> : <Plus className="mr-2" size={5} />}
+              {isAdding ? "Cerrar Panel" : "GENERAR TAREA"}
+            </Button>
+          )}
 
-          {items.length > 0 && (
+          {canEdit && items.length > 0 && (
             <Button
               type="button"
               onClick={handleSelectionButton}
@@ -477,7 +486,12 @@ export function ProduccionInformativaManager() {
                 <label className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.3em] ml-2">Unidad / Máquina</label>
                 <select
                   value={formData.maquina_id}
-                  onChange={(e) => setFormData({ ...formData, maquina_id: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, maquina_id: e.target.value });
+                    if (!editingId && e.target.value) {
+                      fetchNextOrden(e.target.value);
+                    }
+                  }}
                   className="w-full bg-zinc-50 dark:bg-black/40 border-2 border-zinc-100 dark:border-white/[0.05] h-14 rounded-xl px-6 font-bold text-zinc-900 dark:text-white focus:border-brand transition-all outline-none"
                 >
                   <option value="">Seleccione máquina</option>
@@ -609,40 +623,56 @@ export function ProduccionInformativaManager() {
             </button>
           </div>
 
-          {activeTab === 'historial' && (
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Desde</span>
-                <Input
-                  type="date"
-                  value={fechaDesde}
-                  onChange={(e) => setFechaDesde(e.target.value)}
-                  className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-10 rounded-xl font-bold text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Hasta</span>
-                <Input
-                  type="date"
-                  value={fechaHasta}
-                  onChange={(e) => setFechaHasta(e.target.value)}
-                  className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-10 rounded-xl font-bold text-xs"
-                />
-              </div>
-              {(fechaDesde || fechaHasta) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setFechaDesde("");
-                    setFechaHasta("");
-                  }}
-                  className="h-10 px-4 rounded-xl font-bold text-xs hover:text-brand"
-                >
-                  Limpiar
-                </Button>
-              )}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Cpu size={14} className="text-zinc-400" />
+              <select
+                value={filtroMaquina}
+                onChange={(e) => setFiltroMaquina(e.target.value)}
+                className="bg-white dark:bg-black/40 border-2 border-zinc-200 dark:border-white/[0.05] h-10 rounded-xl px-4 font-bold text-[10px] uppercase tracking-wider outline-none focus:border-brand transition-all"
+              >
+                <option value="">Todas las máquinas</option>
+                {maquinas.map(m => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
             </div>
-          )}
+
+            {activeTab === 'historial' && (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Desde</span>
+                  <Input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
+                    className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-10 rounded-xl font-bold text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Hasta</span>
+                  <Input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/[0.05] h-10 rounded-xl font-bold text-xs"
+                  />
+                </div>
+                {(fechaDesde || fechaHasta) && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setFechaDesde("");
+                      setFechaHasta("");
+                    }}
+                    className="h-10 px-4 rounded-xl font-bold text-xs hover:text-brand"
+                  >
+                    Limpiar
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Listado de Tareas */}
@@ -706,9 +736,14 @@ export function ProduccionInformativaManager() {
                         </div>
                       ) : (
                         <div
-                          onClick={() => handleInlineOrdenStart(item)}
-                          className="w-12 h-12 bg-brand/10 dark:bg-brand/20 border-2 border-brand/20 rounded-xl flex items-center justify-center cursor-pointer hover:bg-brand/20 hover:border-brand/40 transition-all group relative"
-                          title="Click para editar orden"
+                          onClick={() => canEdit && handleInlineOrdenStart(item)}
+                          className={cn(
+                            "w-12 h-12 border-2 rounded-xl flex items-center justify-center transition-all group relative",
+                            canEdit
+                              ? "bg-brand/10 dark:bg-brand/20 border-brand/20 cursor-pointer hover:bg-brand/20 hover:border-brand/40"
+                              : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 cursor-default"
+                          )}
+                          title={canEdit ? "Click para editar orden" : ""}
                         >
                           <span className="text-lg font-black text-brand">{item.orden ?? '-'}</span>
                         </div>
@@ -757,38 +792,44 @@ export function ProduccionInformativaManager() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleComplete(item)}
-                          className={cn(
-                            "w-12 h-12 rounded-lg transition-all border-2",
-                            item.estado === 'completado'
-                              ? "bg-green-500 border-green-500 text-white"
-                              : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/5 text-zinc-400 hover:text-green-500 hover:border-green-500"
-                          )}
-                        >
-                          <CheckCircle2 size={18} />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleComplete(item)}
+                            className={cn(
+                              "w-12 h-12 rounded-lg transition-all border-2",
+                              item.estado === 'completado'
+                                ? "bg-green-500 border-green-500 text-white"
+                                : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/5 text-zinc-400 hover:text-green-500 hover:border-green-500"
+                            )}
+                          >
+                            <CheckCircle2 size={18} />
+                          </Button>
+                        )}
 
-                        <div className="h-8 w-px bg-zinc-100 dark:bg-white/10" />
+                        {canEdit && <div className="h-8 w-px bg-zinc-100 dark:bg-white/10" />}
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(item)}
-                          className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10"
-                        >
-                          <Edit2 size={18} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => triggerDelete(item.id)}
-                          className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10"
-                        >
-                          <Trash2 size={18} />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(item)}
+                            className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10"
+                          >
+                            <Edit2 size={18} />
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => triggerDelete(item.id)}
+                            className="w-12 h-12 rounded-lg transition-all border border-transparent hover:border-current bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10"
+                          >
+                            <Trash2 size={18} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Card>

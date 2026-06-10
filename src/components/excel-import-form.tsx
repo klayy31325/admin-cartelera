@@ -75,10 +75,13 @@ export function ExcelImportForm() {
         setPreviewData(null);
         
         const hasErrors = data.data.errores && data.data.errores.length > 0;
+        const hasDuplicates = data.data.duplicados > 0;
         if (hasErrors) {
-          toast.warning(`Importación parcial: ${data.data.insertados} guardados, ${data.data.errores.length} fallaron`, {
+          toast.warning(`Importación parcial: ${data.data.insertados} guardados, ${data.data.duplicados} duplicados omitidos, ${data.data.errores.length} fallaron`, {
             duration: 5000,
           });
+        } else if (hasDuplicates) {
+          toast.success(`Importación completada: ${data.data.insertados} guardados, ${data.data.duplicados} duplicados omitidos`);
         } else {
           toast.success(`Importación exitosa: ${data.data.insertados} registros guardados`);
         }

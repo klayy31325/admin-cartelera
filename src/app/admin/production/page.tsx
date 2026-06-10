@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ExcelImportForm } from "@/components/excel-import-form";
 import { TrabajoForm } from "@/components/trabajo-form";
 import { VelocidadForm } from "@/components/velocity-form";
@@ -11,17 +11,26 @@ import {
   ClipboardList, Zap, Trash2, Download
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api-config";
+import { useAuth } from "@/components/auth-provider";
 
-const TABS = [
-  { id: "import", label: "Importar Excel", icon: FileSpreadsheet },
-  { id: "list", label: "Bitácora Producción", icon: Activity },
-  { id: "trabajo", label: "Carga Manual (Aux)", icon: ClipboardList },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "import" | "list" | "trabajo";
 
 export default function ProductionPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("import");
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabId>("list");
+
+  const TABS = useMemo(() => {
+    const items: { id: TabId; label: string; icon: typeof Activity }[] = [
+      { id: "list", label: "Bitácora Producción", icon: Activity },
+    ];
+    if (user?.rol === "admin" || user?.rol === "editor" || user?.rol === "operador") {
+      items.push({ id: "import", label: "Importar Excel", icon: FileSpreadsheet });
+    }
+    if (user?.rol === "admin" || user?.rol === "editor") {
+      items.push({ id: "trabajo", label: "Carga Manual (Aux)", icon: ClipboardList });
+    }
+    return items;
+  }, [user?.rol]);
 
   function handleExport() {
     const token = localStorage.getItem("curex_token");

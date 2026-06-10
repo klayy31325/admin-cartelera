@@ -70,6 +70,28 @@ class TrabajosController {
     } catch (error) { next(error); }
   }
 
+  async importTotales(req, res, next) {
+    try {
+      if (!req.file) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false, error: { message: 'Archivo Excel requerido.' }
+        });
+      }
+      const maquinaNombre = req.body.maquina || req.query.maquina;
+      const preview = req.query.preview === 'true';
+      const resultado = await trabajosService.importTotales(req.file.buffer, maquinaNombre, preview);
+      res.status(HTTP_STATUS.OK).json({ success: true, data: resultado });
+    } catch (error) { next(error); }
+  }
+
+  async getResumenTotales(req, res, next) {
+    try {
+      const { maquina_id, mes } = req.query;
+      const data = await trabajosService.getResumenTotales(maquina_id, mes);
+      res.status(HTTP_STATUS.OK).json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
   async exportExcel(req, res, next) {
     try {
       const { maquina_id, fecha_inicio, fecha_fin } = req.query;

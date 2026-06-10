@@ -3,6 +3,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = ['var(--col-brand)', 'var(--col-warn)', 'var(--col-danger)', 'var(--col-info)', 'var(--col-text-muted)'];
 
+const PARADA_LIMITS = {
+  'PREPARACION': 13.10,
+  'PRE-PRENSA': 5,
+  'COLORIMETRIA': 10,
+  'CALIDAD': 5,
+  'MANTENIMIENTO': 2,
+  'LIMPIEZA GENERAL DE MAQUINA': 3,
+  'PLANIFICACION': 0,
+  'LIMPIEZA DE PLANCHA': 3,
+  'LIMPIEZA DE RODILLO': 3,
+  'LIMPIEZA DE TAMBOR CENTRAL': 3,
+  'PRODUCCION': 5,
+  'PRUEBAS': 3,
+  'LOGISTICA': 0,
+  'FALLAS ELECTRICAS': 0,
+  'APROBACIONES': 2,
+  'ESTANDAR DE COLOR': 0.44,
+  'RRHH': 0,
+  'FALTA DE INSUMO / PEDIDO': 0,
+};
+
 function DesperdicioCard({ label, pct, limit, rawValue, unit }) {
   const pctNum = Number(pct);
   const isOverLimit = pctNum > limit;
@@ -218,6 +239,8 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
                 >
                   {pageData.map((entry, index) => {
                     const globalIndex = currentPage * ITEMS_PER_PAGE + index;
+                    const limit = PARADA_LIMITS[entry.motivo] ?? 999;
+                    const isOver = entry.porcentaje > limit;
                     return (
                       <div key={entry.motivo} className="parada-row">
                         <div className="parada-row__info">
@@ -232,10 +255,20 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
                             className="parada-row__bar-fill"
                             style={{
                               width: `${entry.porcentaje}%`,
-                              backgroundColor: COLORS[globalIndex % COLORS.length]
+                              backgroundColor: isOver ? '#ef4444' : '#22c55e',
+                              boxShadow: isOver ? '0 0 8px #ef4444' : 'none',
                             }}
                           />
+                          {limit > 0 && limit < 100 && (
+                            <div
+                              className="parada-row__limit-line"
+                              style={{ left: `${limit}%` }}
+                            />
+                          )}
                         </div>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: isOver ? '#ef4444' : '#22c55e', marginTop: 1 }}>
+                          {isOver ? `▲ límite ${limit}%` : `✓ límite ${limit}%`}
+                        </span>
                       </div>
                     );
                   })}

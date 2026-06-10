@@ -751,7 +751,7 @@ body::after {
   height: 14px;
   background: var(--col-chart-grid);
   border-radius: 1px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -763,6 +763,17 @@ body::after {
   height: 100%;
   border-radius: 7px;
   transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.parada-row__limit-line {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #ffffff;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .tv-kpi {

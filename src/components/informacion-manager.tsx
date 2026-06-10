@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from "@/lib/api-config";
+import { useAuth } from "@/components/auth-provider";
 
 interface Informacion {
   id: number;
@@ -37,6 +38,7 @@ interface Informacion {
 }
 
 export function InformacionManager() {
+  const { canEdit } = useAuth();
   const [informaciones, setInformaciones] = useState<Informacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -56,7 +58,10 @@ export function InformacionManager() {
 
   const fetchInformaciones = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/informacion`);
+      const token = localStorage.getItem("curex_token");
+      const res = await fetch(`${API_BASE_URL}/informacion`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       const listado = data.success ? data.data : (Array.isArray(data) ? data : []);
       setInformaciones(listado);
@@ -102,9 +107,10 @@ export function InformacionManager() {
       
       const method = editingId ? "PUT" : "POST";
 
+      const token = localStorage.getItem("curex_token");
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
 
@@ -133,9 +139,10 @@ export function InformacionManager() {
 
   const handleToggle = async (id: number, currentStatus: boolean) => {
     try {
+      const token = localStorage.getItem("curex_token");
       await fetch(`${API_BASE_URL}/informacion/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ activo: !currentStatus }),
       });
       fetchInformaciones();
@@ -155,7 +162,11 @@ export function InformacionManager() {
   const handleConfirmedDelete = async () => {
     if (!deleteId) return;
     try {
-      await fetch(`${API_BASE_URL}/informacion/${deleteId}`, { method: "DELETE" });
+      const token = localStorage.getItem("curex_token");
+      await fetch(`${API_BASE_URL}/informacion/${deleteId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
       toast.success("Eliminado con éxito");
       fetchInformaciones();
     } catch (error) {
@@ -190,15 +201,17 @@ export function InformacionManager() {
           </div>
         </div>
         
-        <Button 
-          onClick={() => isAdding ? resetForm() : setIsAdding(true)}
-          className={cn(
-            "h-16 px-10 rounded-xl font-black uppercase tracking-[0.2em] transition-all relative z-10",
-            isAdding ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500" : "bg-brand text-white hover:scale-105 shadow-xl shadow-brand/20"
-          )}
-        >
-          {isAdding ? <><X size={20} className="mr-2" /> Cancelar</> : <><Plus size={20} className="mr-2" /> Nuevo Aviso</>}
-        </Button>
+        {canEdit && (
+          <Button 
+            onClick={() => isAdding ? resetForm() : setIsAdding(true)}
+            className={cn(
+              "h-16 px-10 rounded-xl font-black uppercase tracking-[0.2em] transition-all relative z-10",
+              isAdding ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500" : "bg-brand text-white hover:scale-105 shadow-xl shadow-brand/20"
+            )}
+          >
+            {isAdding ? <><X size={20} className="mr-2" /> Cancelar</> : <><Plus size={20} className="mr-2" /> Nuevo Aviso</>}
+          </Button>
+        )}
       </div>
 
       {/* Formulario Maestro */}
@@ -355,33 +368,39 @@ export function InformacionManager() {
 
                 {/* Industrial Actions */}
                 <div className="flex items-center gap-3 mt-8">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleToggle(info.id, info.activo)}
-                    className={cn(
-                      "flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all",
-                      info.activo ? "hover:bg-amber-500/10 hover:text-amber-500 border-transparent hover:border-amber-500/30" : "hover:bg-green-500/10 hover:text-green-500 border-transparent hover:border-green-500/30"
-                    )}
-                  >
-                    {info.activo ? "Pausar" : "Activar"}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleEdit(info)}
-                    className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10 border border-transparent hover:border-brand/30"
-                  >
-                    <Edit2 size={18} />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => triggerDeleteConfirm(info.id)}
-                    className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/30"
-                  >
-                    <Trash2 size={18} />
-                  </Button>
+                  {canEdit && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleToggle(info.id, info.activo)}
+                      className={cn(
+                        "flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all",
+                        info.activo ? "hover:bg-amber-500/10 hover:text-amber-500 border-transparent hover:border-amber-500/30" : "hover:bg-green-500/10 hover:text-green-500 border-transparent hover:border-green-500/30"
+                      )}
+                    >
+                      {info.activo ? "Pausar" : "Activar"}
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleEdit(info)}
+                      className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-brand hover:bg-brand/10 border border-transparent hover:border-brand/30"
+                    >
+                      <Edit2 size={18} />
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => triggerDeleteConfirm(info.id)}
+                      className="w-12 h-12 rounded-xl bg-zinc-50 dark:bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/30"
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))

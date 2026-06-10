@@ -75,9 +75,15 @@ export default function LoginPage() {
           throw new Error(data.error?.message || "Credenciales incorrectas");
         }
 
-        // Guardar token y redirigir usando AuthContext
+        // Guardar token y redirigir según rol
         login(data.data.token, data.data.usuario);
-        router.push("/admin/production");
+        const roleRedirects: Record<string, string> = {
+          admin: "/admin",
+          editor: "/admin/production",
+          operador: "/admin/production",
+          visor: "/admin",
+        };
+        router.push(roleRedirects[data.data.usuario.rol] || "/admin/production");
 
       } else {
         // Lógica de Registro

@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/lib/api-config";
+import { useAuth } from "@/components/auth-provider";
 
 interface TV {
   id: number;
@@ -46,6 +47,8 @@ interface TV {
 }
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.rol === "admin";
   const [tvs, setTvs] = useState<TV[]>([]);
   const [machines, setMachines] = useState<{ id: number, name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -259,13 +262,15 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          <Button
-            onClick={() => handleOpenModal()}
-            className="bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest px-6 h-11 rounded-lg flex items-center gap-2 shadow-[0_0_20px_rgba(184,115,51,0.15)] transition-all text-xs"
-          >
-            <Plus size={16} strokeWidth={3} />
-            NUEVA TV
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => handleOpenModal()}
+              className="bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest px-6 h-11 rounded-lg flex items-center gap-2 shadow-[0_0_20px_rgba(184,115,51,0.15)] transition-all text-xs"
+            >
+              <Plus size={16} strokeWidth={3} />
+              NUEVA TV
+            </Button>
+          )}
         </header>
 
         {/* Grid de Carteleras — TV Cards */}
@@ -344,26 +349,30 @@ export default function AdminDashboard() {
 
                   {/* Right: Actions */}
                   <div className="flex flex-col items-center justify-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); handleOpenModal(tv); }}
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 rounded-xl text-muted-foreground hover:text-brand hover:bg-brand/10 transition-all"
-                    >
-                      <Edit2 size={13} />
-                    </Button>
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); toggleQuickStatus(tv); }}
-                      variant="ghost"
-                      size="icon"
-                      className={`w-8 h-8 rounded-xl transition-all ${
-                        tv.estado_conexion === 'online'
-                          ? 'text-green-500 hover:bg-green-500/10'
-                          : 'text-muted-foreground hover:bg-muted/60'
-                      }`}
-                    >
-                      <Power size={13} />
-                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleOpenModal(tv); }}
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 rounded-xl text-muted-foreground hover:text-brand hover:bg-brand/10 transition-all"
+                        >
+                          <Edit2 size={13} />
+                        </Button>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); toggleQuickStatus(tv); }}
+                          variant="ghost"
+                          size="icon"
+                          className={`w-8 h-8 rounded-xl transition-all ${
+                            tv.estado_conexion === 'online'
+                              ? 'text-green-500 hover:bg-green-500/10'
+                              : 'text-muted-foreground hover:bg-muted/60'
+                          }`}
+                        >
+                          <Power size={13} />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -486,7 +495,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                {editingTv && (
+                {editingTv && isAdmin && (
                   <Button 
                     type="button"
                     onClick={() => handleDelete(editingTv.id)}
@@ -659,13 +668,15 @@ export default function AdminDashboard() {
             </div>
 
             <div className="p-6 border-t border-border bg-card/50 backdrop-blur-md flex gap-3">
-              <Button 
-                onClick={() => handleOpenModal(selectedTv)}
-                className="flex-1 bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest h-12 rounded-xl flex items-center justify-center gap-2"
-              >
-                <Edit2 size={16} />
-                Editar Datos
-              </Button>
+              {isAdmin && (
+                <Button 
+                  onClick={() => handleOpenModal(selectedTv)}
+                  className="flex-1 bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest h-12 rounded-xl flex items-center justify-center gap-2"
+                >
+                  <Edit2 size={16} />
+                  Editar Datos
+                </Button>
+              )}
               <Button 
                 onClick={() => setSelectedTv(null)}
                 variant="outline"

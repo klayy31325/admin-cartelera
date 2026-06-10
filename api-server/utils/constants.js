@@ -9,13 +9,6 @@ const ROLES = {
   EDITOR: 'editor',
 };
 
-const ROLES_HIERARCHY = {
-  admin: ['admin', 'editor', 'operador', 'visor'],
-  editor: ['editor', 'visor'],
-  operador: ['operador', 'visor'],
-  visor: ['visor'],
-};
-
 const SALT_ROUNDS = 10;
 
 const HTTP_STATUS = {

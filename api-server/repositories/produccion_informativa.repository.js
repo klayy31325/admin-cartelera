@@ -50,11 +50,14 @@ class ProduccionInformativaRepository {
     return row;
   }
 
-  async getMaxOrden(empresa_id) {
-    const [[row]] = await pool.execute(
-      'SELECT MAX(orden) as max_orden FROM produccion_informativa WHERE empresa_id = ?',
-      [empresa_id]
-    );
+  async getMaxOrden(empresa_id, maquina_id = null) {
+    let query = 'SELECT MAX(orden) as max_orden FROM produccion_informativa WHERE empresa_id = ?';
+    const params = [empresa_id];
+    if (maquina_id) {
+      query += ' AND maquina_id = ?';
+      params.push(maquina_id);
+    }
+    const [[row]] = await pool.execute(query, params);
     return row?.max_orden || 0;
   }
 
@@ -64,13 +67,13 @@ class ProduccionInformativaRepository {
 
     if (orden < 1) throw new Error('El orden debe ser un número positivo mayor o igual a 1');
 
-    // Correr tareas existentes hacia abajo para hacer espacio
+    // Correr tareas existentes hacia abajo para hacer espacio (solo misma máquina)
     await pool.execute(
       `UPDATE produccion_informativa 
        SET orden = orden + 1 
-       WHERE empresa_id = ? AND orden >= ? 
+       WHERE empresa_id = ? AND maquina_id = ? AND orden >= ? 
        AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`,
-      [empresa_id, orden]
+      [empresa_id, data.maquina_id, orden]
     );
 
     const [result] = await pool.execute(
@@ -92,14 +95,17 @@ class ProduccionInformativaRepository {
     return { id: result.insertId, ...data };
   }
 
-  async resequenceActiveTasks(empresa_id) {
-    const [activeTasks] = await pool.execute(
-      `SELECT id FROM produccion_informativa 
+  async resequenceActiveTasks(empresa_id, maquina_id = null) {
+    let query = `SELECT id FROM produccion_informativa 
        WHERE empresa_id = ? 
-       AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'
-       ORDER BY orden ASC, id ASC`,
-      [empresa_id]
-    );
+       AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`;
+    const params = [empresa_id];
+    if (maquina_id) {
+      query += ' AND maquina_id = ?';
+      params.push(maquina_id);
+    }
+    query += ' ORDER BY orden ASC, id ASC';
+    const [activeTasks] = await pool.execute(query, params);
     for (let i = 0; i < activeTasks.length; i++) {
       await pool.execute('UPDATE produccion_informativa SET orden = ? WHERE id = ?', [i + 1, activeTasks[i].id]);
     }
@@ -109,13 +115,17 @@ class ProduccionInformativaRepository {
     const current = await this.findById(id);
     if (!current) throw new Error('Registro no encontrado');
 
+    const empresa_id = current.empresa_id;
+    const maquinaIdChanged = data.maquina_id !== undefined && Number(data.maquina_id) !== current.maquina_id;
     const wasCompleted = current.estado === 'completado';
     const becomingCompleted = data.estado === 'completado';
     const uncompleting = wasCompleted && data.estado !== undefined && !becomingCompleted;
 
+    const targetMaquinaId = maquinaIdChanged ? Number(data.maquina_id) : current.maquina_id;
+
     let finalOrden;
     if (uncompleting) {
-      const maxOrden = await this.getMaxOrden(current.empresa_id);
+      const maxOrden = await this.getMaxOrden(empresa_id, targetMaquinaId);
       finalOrden = maxOrden + 1;
     } else {
       finalOrden = data.orden !== undefined ? Number(data.orden) : current.orden;
@@ -123,27 +133,44 @@ class ProduccionInformativaRepository {
 
     if (finalOrden < 1) throw new Error('El orden debe ser un número positivo mayor o igual a 1');
 
-    // Reordenamiento: correr tareas activas para hacer espacio/cerrar hueco
-    if (data.orden !== undefined && !wasCompleted && !becomingCompleted && !uncompleting) {
-      const oldOrden = current.orden;
-      if (finalOrden < oldOrden) {
-        // Subió de posición: correr hacia abajo las que están entre nueva y vieja
+    if (maquinaIdChanged) {
+      // Cambió de máquina: cerrar hueco en máquina vieja
+      await this.resequenceActiveTasks(empresa_id, current.maquina_id);
+
+      // Hacer espacio en máquina nueva
+      if (!becomingCompleted && !uncompleting) {
         await pool.execute(
           `UPDATE produccion_informativa 
            SET orden = orden + 1 
-           WHERE empresa_id = ? AND id != ? AND orden >= ? AND orden < ? 
+           WHERE empresa_id = ? AND maquina_id = ? AND orden >= ? 
            AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`,
-          [current.empresa_id, id, finalOrden, oldOrden]
+          [empresa_id, targetMaquinaId, finalOrden]
         );
-      } else if (finalOrden > oldOrden) {
-        // Bajó de posición: correr hacia arriba las que están entre vieja y nueva
-        await pool.execute(
-          `UPDATE produccion_informativa 
-           SET orden = orden - 1 
-           WHERE empresa_id = ? AND id != ? AND orden > ? AND orden <= ? 
-           AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`,
-          [current.empresa_id, id, oldOrden, finalOrden]
-        );
+      }
+    } else {
+      // Reordenamiento dentro de la misma máquina
+      if (data.orden !== undefined && !wasCompleted && !becomingCompleted && !uncompleting) {
+        const oldOrden = current.orden;
+        const maquina_id = current.maquina_id;
+        if (finalOrden < oldOrden) {
+          // Subió de posición: correr hacia abajo las que están entre nueva y vieja
+          await pool.execute(
+            `UPDATE produccion_informativa 
+             SET orden = orden + 1 
+             WHERE empresa_id = ? AND maquina_id = ? AND id != ? AND orden >= ? AND orden < ? 
+             AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`,
+            [empresa_id, maquina_id, id, finalOrden, oldOrden]
+          );
+        } else if (finalOrden > oldOrden) {
+          // Bajó de posición: correr hacia arriba las que están entre vieja y nueva
+          await pool.execute(
+            `UPDATE produccion_informativa 
+             SET orden = orden - 1 
+             WHERE empresa_id = ? AND maquina_id = ? AND id != ? AND orden > ? AND orden <= ? 
+             AND COALESCE(NULLIF(TRIM(LOWER(estado)), ''), 'pendiente') <> 'completado'`,
+            [empresa_id, maquina_id, id, oldOrden, finalOrden]
+          );
+        }
       }
     }
 
@@ -165,14 +192,21 @@ class ProduccionInformativaRepository {
     );
 
     if (!wasCompleted && becomingCompleted) {
-      await this.resequenceActiveTasks(current.empresa_id);
+      await this.resequenceActiveTasks(empresa_id, targetMaquinaId);
     }
 
     return { id, ...data };
   }
 
   async delete(id) {
+    const current = await this.findById(id);
+    if (!current) throw new Error('Registro no encontrado');
+
     const [result] = await pool.execute('DELETE FROM produccion_informativa WHERE id = ?', [id]);
+
+    // Resequenciar tareas activas restantes de esa máquina
+    await this.resequenceActiveTasks(current.empresa_id, current.maquina_id);
+
     return result;
   }
 }

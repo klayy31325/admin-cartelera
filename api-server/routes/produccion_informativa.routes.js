@@ -27,11 +27,12 @@ router.get('/empresa/:empresa_id', async (req, res, next) => {
   }
 });
 
-// Obtener el siguiente número de orden disponible
+// Obtener el siguiente número de orden disponible (por máquina)
 router.get('/next-orden', async (req, res, next) => {
   try {
-    const empresa_id = req.query.empresa_id || 2;
-    const maxOrden = await produccionInformativaRepository.getMaxOrden(Number(empresa_id));
+    const empresa_id = Number(req.query.empresa_id) || 2;
+    const maquina_id = req.query.maquina_id ? Number(req.query.maquina_id) : null;
+    const maxOrden = await produccionInformativaRepository.getMaxOrden(empresa_id, maquina_id);
     res.json({ success: true, data: { nextOrden: maxOrden + 1 } });
   } catch (err) {
     next(err);

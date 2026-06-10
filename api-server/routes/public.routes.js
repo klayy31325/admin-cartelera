@@ -9,6 +9,28 @@ const informacionRepository = require('../repositories/informacion.repository');
 const velocidadRepository = require('../repositories/velocidad.repository');
 const desperdiciosRepository = require('../repositories/desperdicios.repository');
 const produccionInformativaRepository = require('../repositories/produccion_informativa.repository');
+const resumenExcelRepository = require('../repositories/resumen_excel.repository');
+
+const MOTIVOS_PARADA = [
+  { id: 1, nombre: 'PREPARACION' },
+  { id: 2, nombre: 'PRE-PRENSA' },
+  { id: 3, nombre: 'COLORIMETRIA' },
+  { id: 4, nombre: 'CALIDAD' },
+  { id: 5, nombre: 'MANTENIMIENTO' },
+  { id: 6, nombre: 'LIMPIEZA GENERAL DE MAQUINA' },
+  { id: 7, nombre: 'PLANIFICACION' },
+  { id: 8, nombre: 'LIMPIEZA DE PLANCHA' },
+  { id: 9, nombre: 'LIMPIEZA DE RODILLO' },
+  { id: 10, nombre: 'LIMPIEZA DE TAMBOR CENTRAL' },
+  { id: 11, nombre: 'PRODUCCION' },
+  { id: 12, nombre: 'PRUEBAS' },
+  { id: 13, nombre: 'LOGISTICA' },
+  { id: 14, nombre: 'FALLAS ELECTRICAS' },
+  { id: 15, nombre: 'APROBACIONES' },
+  { id: 16, nombre: 'ESTANDAR DE COLOR' },
+  { id: 17, nombre: 'RRHH' },
+  { id: 18, nombre: 'FALTA DE INSUMO / PEDIDO' },
+];
 
 /**
  * GET /api/public/maquinas
@@ -152,6 +174,83 @@ router.get('/dashboard', async (req, res, next) => {
       }
     }
 
+    // Obtener totales del Excel (resumen_excel) para el mes activo
+    // y reemplazar los valores mensuales con los totales exactos
+    let resumenExcelData = null;
+    if (mId) {
+      resumenExcelData = await resumenExcelRepository.findByMaquinaYMes(mId, dataMonth);
+    } else {
+      const todosResumen = await resumenExcelRepository.findUltimos(1);
+      resumenExcelData = todosResumen;
+    }
+
+    if (resumenExcelData) {
+      const overrideList = Array.isArray(resumenExcelData) ? resumenExcelData : [resumenExcelData];
+      overrideList.forEach(ex => {
+        const mid = Number(ex.maquina_id);
+        // Override produccion mensual con valores del Excel
+        if (monthlyData.produccion) {
+          const prodEntry = monthlyData.produccion.find(p => Number(p.maquina_id) === mid);
+          if (prodEntry) {
+            prodEntry.total_metros = Number(ex.metros_ml);
+            prodEntry.total_minutos = Number(ex.tiempo_total_min);
+          }
+        }
+        // Override velocidad mensual con promedios del Excel
+        if (monthlyData.velocidad) {
+          monthlyData.velocidad.promedio_real = Number(ex.vel_real_avg);
+          monthlyData.velocidad.promedio_teorica = Number(ex.vel_teorica_avg);
+        }
+        // Override breakdown_velocidad mensual
+        if (monthlyData.breakdown_velocidad) {
+          const velBd = monthlyData.breakdown_velocidad.find(d => Number(d.maquina_id) === mid);
+          if (velBd) {
+            velBd.avg_real = Number(ex.vel_real_avg);
+            velBd.avg_teorica = Number(ex.vel_teorica_avg);
+          }
+        }
+        // Override desperdicio mensual
+        if (monthlyData.desperdicio && monthlyData.desperdicio.total_kg !== undefined) {
+          monthlyData.desperdicio.total_kg = Number(ex.desperdicio_kg);
+          monthlyData.desperdicio.total_ml = Number(ex.desperdicio_ml);
+          monthlyData.desperdicio.pct_kg_total = Number(ex.desperdicio_pct_kg);
+          monthlyData.desperdicio.total_produccion_kg = Number(ex.produccion_kg);
+        }
+        // Override breakdown_desperdicio mensual
+        if (monthlyData.breakdown_desperdicio) {
+          const despBd = monthlyData.breakdown_desperdicio.find(d => Number(d.maquina_id) === mid);
+          if (despBd) {
+            despBd.total_kg = Number(ex.desperdicio_kg);
+            despBd.total_ml = Number(ex.desperdicio_ml);
+            despBd.pct_kg_total = Number(ex.desperdicio_pct_kg);
+            despBd.total_produccion_kg = Number(ex.produccion_kg);
+          }
+        }
+        // Override paradas mensual con desglose del Excel (18 motivos)
+        if (monthlyData.paradas) {
+          const paradasExcel = [];
+          let hasParadas = false;
+          for (const m of MOTIVOS_PARADA) {
+            const colName = 'parada_' + m.id + '_min';
+            const minutos = Number(ex[colName]) || 0;
+            if (minutos > 0) hasParadas = true;
+            paradasExcel.push({
+              maquina_id: mid,
+              maquina_nombre: null,
+              motivo_nombre: m.nombre,
+              total_minutos: minutos,
+            });
+          }
+          // Solo reemplazar si hay datos reales en el Excel
+          if (hasParadas) {
+            // Reemplazar las paradas de esta máquina
+            const otrasMaquinas = monthlyData.paradas.filter(p => Number(p.maquina_id) !== mid);
+            monthlyData.paradas = [...otrasMaquinas, ...paradasExcel];
+          }
+        }
+      });
+    }
+
     res.json({
       success: true,
       data: {
@@ -170,9 +269,31 @@ router.get('/dashboard', async (req, res, next) => {
           _dataMonth: dataMonth,
           _fallbackMonth: fallbackMonth
         },
+        resumen_excel: resumenExcelData,
         lastSync: new Date().toISOString()
       }
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/public/resumen-excel?maquina_id=1&mes=2026-05
+ * Retorna los totales pre-calculados desde el Excel.
+ */
+router.get('/resumen-excel', async (req, res, next) => {
+  try {
+    const { maquina_id, mes } = req.query;
+    const targetMes = mes || new Date().toISOString().slice(0, 7);
+
+    if (maquina_id) {
+      const data = await resumenExcelRepository.findByMaquinaYMes(Number(maquina_id), targetMes);
+      return res.json({ success: true, data: data || null });
+    }
+
+    const data = await resumenExcelRepository.findUltimos(2);
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
