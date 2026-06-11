@@ -3,26 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = ['var(--col-brand)', 'var(--col-warn)', 'var(--col-danger)', 'var(--col-info)', 'var(--col-text-muted)'];
 
-const PARADA_LIMITS = {
-  'PREPARACION': 13.10,
-  'PRE-PRENSA': 5,
-  'COLORIMETRIA': 10,
-  'CALIDAD': 5,
-  'MANTENIMIENTO': 2,
-  'LIMPIEZA GENERAL DE MAQUINA': 3,
-  'PLANIFICACION': 0,
-  'LIMPIEZA DE PLANCHA': 3,
-  'LIMPIEZA DE RODILLO': 3,
-  'LIMPIEZA DE TAMBOR CENTRAL': 3,
-  'PRODUCCION': 5,
-  'PRUEBAS': 3,
-  'LOGISTICA': 0,
-  'FALLAS ELECTRICAS': 0,
-  'APROBACIONES': 2,
-  'ESTANDAR DE COLOR': 0.44,
-  'RRHH': 0,
-  'FALTA DE INSUMO / PEDIDO': 0,
-};
+function buildParadaLimits(metas) {
+  if (!metas || metas.length === 0) return {};
+  const map = {};
+  metas.forEach(m => { map[m.motivo_nombre] = Number(m.valor_limite); });
+  return map;
+}
 
 function DesperdicioCard({ label, pct, limit, rawValue, unit }) {
   const pctNum = Number(pct);
@@ -97,6 +83,7 @@ function TechKpi({ variant, label, value, unit, subtext }) {
 }
 
 export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maquina, maquina_id }) {
+  const paradaLimits = buildParadaLimits(data?.metas_parada);
   const allProduccion = data?.produccion ?? [];
 
   const fallbackMonth = data?._fallbackMonth;
@@ -160,7 +147,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
         <div
           style={{
             position: 'absolute',
-            top: -12,
+            top: -12, // Ajustado para que quede tipo "botón flotante" en el borde
             left: 0,
             right: 0,
             display: 'flex',
@@ -171,17 +158,18 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
           <span
             style={{
               background: 'var(--col-warn)',
-              color: '#1a1a2e',
-              fontSize: '8px',
+              color: '#ffffffff',
+              fontSize: '11px', // Un punto más chico estiliza más
               fontWeight: 900,
-              padding: '2px 12px',
-              borderRadius: '0 0 4px 4px',
-              letterSpacing: '0.1em',
+              padding: '4px 16px', // Más aire a los lados
+              borderRadius: '50px', // Bordes completamente redondeados estilo cápsula
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
               fontFamily: 'var(--font-mono)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', // Sutil sombra para darle nivel
             }}
           >
-            ⚡ MES ANTERIOR
+            MES ANTERIOR
           </span>
         </div>
       )}
@@ -239,7 +227,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
                 >
                   {pageData.map((entry, index) => {
                     const globalIndex = currentPage * ITEMS_PER_PAGE + index;
-                    const limit = PARADA_LIMITS[entry.motivo] ?? 999;
+                    const limit = paradaLimits[entry.motivo] ?? 999;
                     const isOver = entry.porcentaje > limit;
                     return (
                       <div key={entry.motivo} className="parada-row">

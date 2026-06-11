@@ -196,7 +196,7 @@ export default function SlideVelocity({ data, maquina, maquina_id }) {
                   </span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                     <span className="stat-number" style={{ fontSize: '36px', fontWeight: 900, color: 'var(--col-text-primary)', lineHeight: 1 }}>
-                      {currentTarget}
+                      {currentTarget.toFixed(2)}
                     </span>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--col-text-muted)' }}>m/min</span>
                   </div>

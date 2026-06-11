@@ -103,6 +103,33 @@ export const trabajoFormSchema = z.object({
 });
 export type TrabajoFormValues = z.infer<typeof trabajoFormSchema>;
 
+export const totalesFormSchema = z.object({
+  maquina_id: z.coerce.number().min(1, "Máquina requerida"),
+  mes: z.string().regex(/^\d{4}-\d{2}$/, "Formato YYYY-MM requerido"),
+  meta_kg: z.coerce.number().min(0).default(0),
+  metros_ml: z.coerce.number().min(0).default(0),
+  produccion_kg: z.coerce.number().min(0).default(0),
+  tiempo_prod_min: z.coerce.number().min(0).default(0),
+  tiempo_parada_min: z.coerce.number().min(0).default(0),
+  tiempo_total_min: z.coerce.number().min(0).default(0),
+  total_trabajos: z.coerce.number().min(0).default(0),
+  desperdicio_ml: z.coerce.number().min(0).default(0),
+  desperdicio_kg: z.coerce.number().min(0).default(0),
+  desperdicio_pct_kg: z.coerce.number().min(0).default(0),
+  desperdicio_pct_ml: z.coerce.number().min(0).default(0),
+  tinta_blanco_kg: z.coerce.number().min(0).default(0),
+  tinta_varias_kg: z.coerce.number().min(0).default(0),
+  tinta_total_kg: z.coerce.number().min(0).default(0),
+  vel_real_avg: z.coerce.number().min(0).default(0),
+  vel_teorica_avg: z.coerce.number().min(0).default(0),
+  paradas: z.record(z.string(), z.coerce.number().min(0).default(0)).optional(),
+  metas_parada: z.array(z.object({
+    motivo_id: z.number(),
+    valor_limite: z.coerce.number().min(0).max(100).default(0),
+  })).optional(),
+});
+export type TotalesFormValues = z.infer<typeof totalesFormSchema>;
+
 export const velocidadFormSchema = z.object({
   maquina_id:               z.coerce.number().min(1, "Máquina requerida"),
   trabajo_id:               z.coerce.number().optional(),

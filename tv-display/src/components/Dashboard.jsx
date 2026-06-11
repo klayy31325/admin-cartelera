@@ -476,12 +476,13 @@ export default function Dashboard() {
           >
             {Component ? (
               <Component
-                data={
-                  id === 'productos' ? data?.daily :
-                    id === 'info' ? data?.info :
-                      id.startsWith('prod-info') || id.startsWith('produccion-info') ? data?.produccion_info :
-                        data?.monthly
-                }
+                  data={
+                    id === 'productos' ? data?.daily :
+                      id === 'info' ? data?.info :
+                        id.startsWith('prod-info') || id.startsWith('produccion-info') ? data?.produccion_info :
+                          id === 'general' ? { ...data?.monthly, resumen_excel: data?.resumen_excel, metas_parada: data?.metas_parada } :
+                            data?.monthly
+                  }
                 velocity={
                   id.startsWith('vel') ? data?.daily?.velocidad?.series :
                     id === 'general' ? data?.monthly?.velocidad :

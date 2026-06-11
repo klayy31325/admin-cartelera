@@ -21,13 +21,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/lib/api-config";
 import { useAuth } from "@/components/auth-provider";
+import { useEffect, useState } from "react";
 
 const allMenuItems = [
   { name: "Panel de Control", href: "/admin", icon: LayoutDashboard, roles: ["admin", "editor", "operador", "visor"] },
   { name: "Producción", href: "/admin/production", icon: ClipboardList, roles: ["admin", "editor", "operador"] },
   { name: "Información Diaria", href: "/admin/informations", icon: Megaphone, roles: ["admin", "editor", "visor"] },
   { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList, roles: ["admin", "editor", "visor"] },
-  { name: "Catálogos", href: "/admin/catalogs", icon: Database, roles: ["admin"] },
   { name: "Logs del Sistema", href: "/admin/logs", icon: Activity, roles: ["admin", "visor"] },
   { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings, roles: ["admin", "editor", "visor"] },
 ];

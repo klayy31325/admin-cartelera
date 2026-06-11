@@ -84,6 +84,14 @@ class TrabajosController {
     } catch (error) { next(error); }
   }
 
+  async saveTotales(req, res, next) {
+    try {
+      const data = await trabajosService.saveTotales(req.body, req.usuario?.id);
+      res.status(HTTP_STATUS.CREATED).json({ success: true, message: 'Totales guardados correctamente.', data });
+      emitProductionUpdate();
+    } catch (error) { next(error); }
+  }
+
   async getResumenTotales(req, res, next) {
     try {
       const { maquina_id, mes } = req.query;

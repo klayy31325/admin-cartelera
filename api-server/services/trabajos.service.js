@@ -13,6 +13,7 @@
 const XLSX = require('xlsx');
 const trabajosRepository = require('../repositories/trabajos.repository');
 const resumenExcelRepository = require('../repositories/resumen_excel.repository');
+const metasParadaRepository = require('../repositories/metas_parada.repository');
 const logsRepository = require('../repositories/logs.repository');
 const AppError = require('../utils/AppError');
 const { HTTP_STATUS } = require('../utils/constants');
@@ -164,7 +165,8 @@ class ExcelTrabajoParser {
    * @returns {Object|null} - Totales encontrados o null
    */
   readSummaryTotals(rows) {
-    for (const row of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
       const marker = String(row[0] || '').trim().toUpperCase();
       if (!marker.startsWith('NF=') && !marker.startsWith('OF=')) continue;
 
@@ -175,10 +177,25 @@ class ExcelTrabajoParser {
 
       // Build 18 parada columns (Excel cols 11-28)
       const paradas = {};
-      for (let i = 0; i < 18; i++) {
-        const idx = i + 11;
+      for (let c = 0; c < 18; c++) {
+        const idx = c + 11;
         const val = Math.round(parseFloat(row[idx])) || 0;
-        paradas[i + 1] = val;
+        paradas[c + 1] = val;
+      }
+
+      // Read META row (one row after NF=/OF=, where col 10 = "meta")
+      const metas_parada = [];
+      if (i + 1 < rows.length) {
+        const metaRow = rows[i + 1];
+        const metaLabel = String(metaRow[10] || '').trim().toLowerCase();
+        if (metaLabel === 'meta') {
+          for (let c = 0; c < 18; c++) {
+            const idx = c + 11;
+            const rawVal = parseFloat(metaRow[idx]);
+            const pctVal = rawVal != null ? Math.round(rawVal * 10000) / 100 : 0;
+            metas_parada.push({ motivo_id: c + 1, valor_limite: pctVal });
+          }
+        }
       }
 
       return {
@@ -199,6 +216,7 @@ class ExcelTrabajoParser {
         paradas,
         vel_real_avg: parseFloat(row[COL.VEL_REAL]) || 0,
         vel_teorica_avg: parseFloat(row[COL.VEL_TEORICA]) || 0,
+        metas_parada,
       };
     }
     return null;
@@ -480,6 +498,9 @@ class TrabajosService {
         }
         if (!mes) mes = new Date().toISOString().slice(0, 7);
         await resumenExcelRepository.upsert(parser.maquina_id, mes, summary);
+        if (summary.metas_parada && summary.metas_parada.length > 0) {
+          await metasParadaRepository.upsertMany(parser.maquina_id, mes, summary.metas_parada);
+        }
         resultados.totales_excel = summary;
       }
     } catch (summaryErr) {
@@ -523,6 +544,10 @@ class TrabajosService {
 
     await resumenExcelRepository.upsert(parser.maquina_id, mes, summary);
 
+    if (summary.metas_parada && summary.metas_parada.length > 0) {
+      await metasParadaRepository.upsertMany(parser.maquina_id, mes, summary.metas_parada);
+    }
+
     await logsRepository.create({
       usuario_id: null,
       accion: 'IMPORT_TOTALS',
@@ -531,6 +556,57 @@ class TrabajosService {
     });
 
     return { importado: true, maquina: maquinaNombre, mes, total_trabajos: summary.total_trabajos };
+  }
+
+  /**
+   * Guardar totales mensuales manualmente (carga manual de totales).
+   * También guarda metas_parada si se proporcionan (opcional).
+   */
+  async saveTotales(data, usuario_id = null) {
+    if (!data.maquina_id) throw new AppError('La máquina es obligatoria.', HTTP_STATUS.BAD_REQUEST);
+
+    // Fallback: si mes viene vacío, usar el mes actual
+    let mes = data.mes;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+      mes = new Date().toISOString().slice(0, 7);
+    }
+
+    const payload = {
+      meta_kg: data.meta_kg || 0,
+      metros_ml: data.metros_ml || 0,
+      produccion_kg: data.produccion_kg || 0,
+      tiempo_prod_min: data.tiempo_prod_min || 0,
+      tiempo_parada_min: data.tiempo_parada_min || 0,
+      tiempo_total_min: data.tiempo_total_min != null ? data.tiempo_total_min : (data.tiempo_prod_min || 0) + (data.tiempo_parada_min || 0),
+      desperdicio_ml: data.desperdicio_ml || 0,
+      desperdicio_kg: data.desperdicio_kg || 0,
+      desperdicio_pct_kg: data.desperdicio_pct_kg ?? null,
+      desperdicio_pct_ml: data.desperdicio_pct_ml ?? null,
+      total_trabajos: data.total_trabajos || 0,
+      tinta_blanco_kg: data.tinta_blanco_kg || 0,
+      tinta_varias_kg: data.tinta_varias_kg || 0,
+      tinta_total_kg: data.tinta_total_kg || 0,
+      vel_real_avg: data.vel_real_avg || 0,
+      vel_teorica_avg: data.vel_teorica_avg || 0,
+      paradas: data.paradas || {},
+    };
+
+    await resumenExcelRepository.upsert(data.maquina_id, mes, payload);
+
+    // Metas de parada: solo si se enviaron explícitamente
+    if (data.metas_parada && Array.isArray(data.metas_parada) && data.metas_parada.length > 0) {
+      await metasParadaRepository.upsertMany(data.maquina_id, mes, data.metas_parada);
+    }
+
+    const maquinaNombre = data.maquina_id === 1 ? 'OLYMPIA' : 'NOVOFLEX';
+    await logsRepository.create({
+      usuario_id,
+      accion: 'SAVE_TOTALS',
+      descripcion: `[CARGA MANUAL TOTALES] Totales de ${maquinaNombre} para ${mes} guardados. Total trabajos: ${payload.total_trabajos}`,
+      tipo: 'success',
+    });
+
+    return { maquina_id: data.maquina_id, mes };
   }
 
   /**

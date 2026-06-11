@@ -139,16 +139,16 @@ export default function AdminDashboard() {
     e.preventDefault();
     const token = localStorage.getItem("curex_token");
     const method = editingTv ? "PUT" : "POST";
-    const url = editingTv 
-      ? `${API_BASE_URL}/tv/${editingTv.id}` 
+    const url = editingTv
+      ? `${API_BASE_URL}/tv/${editingTv.id}`
       : `${API_BASE_URL}/tv`;
 
     try {
       const res = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           ...formData,
@@ -159,15 +159,15 @@ export default function AdminDashboard() {
       if (data.success) {
         toast.success(editingTv ? "Dispositivo actualizado" : "Dispositivo registrado");
         setIsModalOpen(false);
-        
+
         if (selectedTv && editingTv && selectedTv.id === editingTv.id) {
-            // Resolver el nombre de la máquina para la UI local
-            const selectedMachine = machines.find(m => m.id === Number(formData.maquina_id));
-            setSelectedTv({
-              ...selectedTv, 
-              ...formData, 
-              maquina_nombre: selectedMachine ? selectedMachine.name : null
-            } as any);
+          // Resolver el nombre de la máquina para la UI local
+          const selectedMachine = machines.find(m => m.id === Number(formData.maquina_id));
+          setSelectedTv({
+            ...selectedTv,
+            ...formData,
+            maquina_nombre: selectedMachine ? selectedMachine.name : null
+          } as any);
         }
         fetchTvs();
       } else {
@@ -183,9 +183,9 @@ export default function AdminDashboard() {
       const token = localStorage.getItem("curex_token");
       const res = await fetch(`${API_BASE_URL}/tv/${tv.id}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           estado_conexion: tv.estado_conexion
@@ -227,9 +227,9 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/tv/${tv.id}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ ...tv, estado_conexion: newStatus }),
       });
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
       if (data.success) {
         toast.success(`Dispositivo ${newStatus === 'online' ? 'Encendido' : 'Apagado'}`);
         fetchTvs();
-        if (selectedTv?.id === tv.id) setSelectedTv({...selectedTv, estado_conexion: newStatus});
+        if (selectedTv?.id === tv.id) setSelectedTv({ ...selectedTv, estado_conexion: newStatus });
       }
     } catch (error) {
       toast.error("Error al cambiar estado");
@@ -250,9 +250,9 @@ export default function AdminDashboard() {
         {/* Header Panel Principal */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-zinc-200/5 dark:border-white/[0.04] bg-zinc-100/50 dark:bg-zinc-900/30 p-5 rounded-lg relative overflow-hidden">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-brand">
-              <LayoutDashboard size={12} />
-              DISPOSITIVOS // TV PANEL
+            <div className="flex items-center gap-2 text-[30px] font-black uppercase tracking-[0.35em] text-brand">
+              <LayoutDashboard size={25} />
+              DISPOSITIVOS
             </div>
             <h1 className="text-base font-black tracking-widest text-foreground uppercase mt-1">
               GESTIÓN DE CARTELERAS
@@ -262,15 +262,6 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          {isAdmin && (
-            <Button
-              onClick={() => handleOpenModal()}
-              className="bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest px-6 h-11 rounded-lg flex items-center gap-2 shadow-[0_0_20px_rgba(184,115,51,0.15)] transition-all text-xs"
-            >
-              <Plus size={16} strokeWidth={3} />
-              NUEVA TV
-            </Button>
-          )}
         </header>
 
         {/* Grid de Carteleras — TV Cards */}
@@ -291,36 +282,32 @@ export default function AdminDashboard() {
               {/* TV Screen */}
               <Card
                 onClick={() => setSelectedTv(tv)}
-                className={`relative overflow-hidden cursor-pointer transition-all duration-300 rounded-[1.8rem] border-[3px] hover:-translate-y-1 hover:shadow-2xl ${
-                  tv.estado_conexion === 'online'
-                    ? 'border-zinc-300 dark:border-zinc-700 shadow-[0_4px_30px_rgba(34,197,94,0.08)] hover:shadow-[0_8px_40px_rgba(34,197,94,0.15)]'
-                    : 'border-zinc-300 dark:border-zinc-800 shadow-lg hover:shadow-xl hover:border-zinc-400 dark:hover:border-zinc-600'
-                }`}
+                className={`relative overflow-hidden cursor-pointer transition-all duration-300 rounded-[1.8rem] border-[3px] hover:-translate-y-1 hover:shadow-2xl ${tv.estado_conexion === 'online'
+                  ? 'border-zinc-300 dark:border-zinc-700 shadow-[0_4px_30px_rgba(34,197,94,0.08)] hover:shadow-[0_8px_40px_rgba(34,197,94,0.15)]'
+                  : 'border-zinc-300 dark:border-zinc-800 shadow-lg hover:shadow-xl hover:border-zinc-400 dark:hover:border-zinc-600'
+                  }`}
               >
                 {/* Screen Content */}
-                <div className={`relative p-5 flex items-stretch gap-5 min-h-[130px] ${
-                  tv.estado_conexion === 'online'
-                    ? 'bg-gradient-to-br from-zinc-50 via-white to-green-50/30 dark:from-zinc-900 dark:via-zinc-900/95 dark:to-green-950/20'
-                    : 'bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-zinc-900 dark:via-zinc-900/95 dark:to-zinc-950'
-                }`}>
+                <div className={`relative p-5 flex items-stretch gap-5 min-h-[130px] ${tv.estado_conexion === 'online'
+                  ? 'bg-gradient-to-br from-zinc-50 via-white to-green-50/30 dark:from-zinc-900 dark:via-zinc-900/95 dark:to-green-950/20'
+                  : 'bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-zinc-900 dark:via-zinc-900/95 dark:to-zinc-950'
+                  }`}>
                   {/* Screen Glare — hover shine */}
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-white/10 dark:via-white/[0.02] dark:to-white/[0.04]" />
 
                   {/* Left: TV Icon & LED */}
                   <div className="flex flex-col items-center justify-between py-1 shrink-0">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                      tv.estado_conexion === 'online'
-                        ? 'bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.15)] group-hover:shadow-[0_0_25px_rgba(34,197,94,0.25)]'
-                        : 'bg-muted/60 text-muted-foreground'
-                    }`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${tv.estado_conexion === 'online'
+                      ? 'bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.15)] group-hover:shadow-[0_0_25px_rgba(34,197,94,0.25)]'
+                      : 'bg-muted/60 text-muted-foreground'
+                      }`}>
                       <Tv size={22} className="transition-transform duration-500 group-hover:scale-110" />
                     </div>
                     {/* LED indicator */}
-                    <div className={`w-2 h-2 rounded-full mt-2 transition-all duration-500 ${
-                      tv.estado_conexion === 'online'
-                        ? 'bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
-                        : 'bg-zinc-400 dark:bg-zinc-600'
-                    }`} />
+                    <div className={`w-2 h-2 rounded-full mt-2 transition-all duration-500 ${tv.estado_conexion === 'online'
+                      ? 'bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
+                      : 'bg-zinc-400 dark:bg-zinc-600'
+                      }`} />
                   </div>
 
                   {/* Center: Info */}
@@ -332,11 +319,10 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3 mt-3">
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${
-                        tv.estado_conexion === 'online' ? 'text-green-500' : 'text-muted-foreground'
-                      }`}>
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${tv.estado_conexion === 'online' ? 'text-green-500' : 'text-muted-foreground'
+                        }`}>
                         {tv.estado_conexion === 'online' ? '● EN LÍNEA' :
-                         tv.estado_conexion === 'mantenimiento' ? '◉ MANTENIMIENTO' : '○ DESCONECTADO'}
+                          tv.estado_conexion === 'mantenimiento' ? '◉ MANTENIMIENTO' : '○ DESCONECTADO'}
                       </span>
                       <span className="text-[8px] text-muted-foreground font-mono tracking-wide">IP {tv.ip_address}</span>
                       {tv.last_sync && (
@@ -363,11 +349,10 @@ export default function AdminDashboard() {
                           onClick={(e) => { e.stopPropagation(); toggleQuickStatus(tv); }}
                           variant="ghost"
                           size="icon"
-                          className={`w-8 h-8 rounded-xl transition-all ${
-                            tv.estado_conexion === 'online'
-                              ? 'text-green-500 hover:bg-green-500/10'
-                              : 'text-muted-foreground hover:bg-muted/60'
-                          }`}
+                          className={`w-8 h-8 rounded-xl transition-all ${tv.estado_conexion === 'online'
+                            ? 'text-green-500 hover:bg-green-500/10'
+                            : 'text-muted-foreground hover:bg-muted/60'
+                            }`}
                         >
                           <Power size={13} />
                         </Button>
@@ -417,7 +402,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)} />
           <Card className="relative w-full max-w-[410px] bg-background dark:bg-zinc-950 border-zinc-200 dark:border-white/10 p-6 shadow-2xl animate-in zoom-in duration-300 z-[301] text-foreground">
-            <button 
+            <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
@@ -447,22 +432,22 @@ export default function AdminDashboard() {
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Dirección IP</label>
                 <div className="relative">
                   <Wifi className="absolute left-3 top-2.5 text-zinc-500" size={16} />
-                  <Input 
+                  <Input
                     required
                     className="bg-muted/50 dark:bg-white/5 border-zinc-200 dark:border-white/10 pl-10 h-10 text-foreground dark:text-white font-mono text-xs focus:ring-brand focus:border-brand"
                     placeholder="192.168.1.100"
                     value={formData.ip_address}
-                    onChange={(e) => setFormData({...formData, ip_address: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Estado</label>
-                <select 
+                <select
                   className="w-full bg-background dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 h-10 rounded-lg px-4 text-xs text-foreground dark:text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
                   value={formData.estado_conexion}
-                  onChange={(e) => setFormData({...formData, estado_conexion: e.target.value as any})}
+                  onChange={(e) => setFormData({ ...formData, estado_conexion: e.target.value as any })}
                 >
                   <option value="online" className="bg-background dark:bg-zinc-900 text-foreground dark:text-white">Online (Activo)</option>
                   <option value="offline" className="bg-background dark:bg-zinc-900 text-foreground dark:text-white">Offline (Desconectado)</option>
@@ -472,10 +457,10 @@ export default function AdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Máquina Asignada (Opcional)</label>
-                <select 
+                <select
                   className="w-full bg-background dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 h-10 rounded-lg px-4 text-xs text-foreground dark:text-white focus:outline-none focus:border-brand/50 appearance-none cursor-pointer"
                   value={formData.maquina_id}
-                  onChange={(e) => setFormData({...formData, maquina_id: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, maquina_id: e.target.value })}
                 >
                   <option value="" className="bg-background dark:bg-zinc-900 text-foreground dark:text-white">Todas las máquinas (General)</option>
                   {machines.map(m => (
@@ -486,17 +471,17 @@ export default function AdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Información / Notas</label>
-                <textarea 
+                <textarea
                   className="w-full bg-muted/50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 min-h-[64px] rounded-lg p-3 text-xs text-foreground dark:text-white focus:outline-none focus:border-brand/50"
                   placeholder="Detalles adicionales sobre este terminal..."
                   value={formData.informacion}
-                  onChange={(e) => setFormData({...formData, informacion: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, informacion: e.target.value })}
                 />
               </div>
 
               <div className="flex gap-3 pt-2">
                 {editingTv && isAdmin && (
-                  <Button 
+                  <Button
                     type="button"
                     onClick={() => handleDelete(editingTv.id)}
                     variant="outline"
@@ -506,7 +491,7 @@ export default function AdminDashboard() {
                     Eliminar
                   </Button>
                 )}
-                <Button 
+                <Button
                   type="submit"
                   className="bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest h-11 rounded-lg shadow-[0_0_20px_rgba(184,115,51,0.15)] flex-[2] transition-all text-xs"
                 >
@@ -523,11 +508,11 @@ export default function AdminDashboard() {
       {selectedTv && (
         <div className="fixed inset-0 z-[200]">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
             onClick={() => setSelectedTv(null)}
           />
-          
+
           {/* Panel */}
           <div className="fixed top-0 right-0 w-full max-w-md bg-card backdrop-blur-xl border-l border-border shadow-2xl h-screen animate-in slide-in-from-right duration-500 flex flex-col z-[201]">
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
@@ -540,9 +525,9 @@ export default function AdminDashboard() {
                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{selectedTv.empresa}</p>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setSelectedTv(null)}
                 className="text-zinc-500 hover:text-white hover:bg-white/5 rounded-full"
               >
@@ -636,27 +621,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="relative aspect-video w-full border border-brand/30 rounded-xl bg-black/40 overflow-hidden group">
-                  <iframe 
+                  <iframe
                     src={`http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5173/?preview_uid=${selectedTv.uid}`}
                     className="w-[1280px] h-[720px] border-none origin-top-left"
-                    style={{ 
+                    style={{
                       transform: 'scale(0.245)', // Ajustado para un panel de aprox 315px
-                      pointerEvents: 'none' 
+                      pointerEvents: 'none'
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3 gap-2">
                     <p className="text-[8px] text-zinc-400 font-black uppercase tracking-[0.2em]">
-                      {selectedTv.maquina_nombre 
+                      {selectedTv.maquina_nombre
                         ? `En vivo: ${selectedTv.maquina_nombre}`
                         : "En vivo: Planta General"}
                     </p>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className="h-7 w-full text-[8px] font-black uppercase tracking-widest bg-brand/10 text-brand hover:bg-brand hover:text-white transition-all border border-brand/20"
                       onClick={() => {
                         toast.info("Comando de sincronización enviado");
-                        forceSync(selectedTv); 
+                        forceSync(selectedTv);
                       }}
                     >
                       <RefreshCw size={10} className="mr-1.5" />
@@ -669,7 +654,7 @@ export default function AdminDashboard() {
 
             <div className="p-6 border-t border-border bg-card/50 backdrop-blur-md flex gap-3">
               {isAdmin && (
-                <Button 
+                <Button
                   onClick={() => handleOpenModal(selectedTv)}
                   className="flex-1 bg-brand hover:bg-brand-dark text-white font-black uppercase tracking-widest h-12 rounded-xl flex items-center justify-center gap-2"
                 >
@@ -677,7 +662,7 @@ export default function AdminDashboard() {
                   Editar Datos
                 </Button>
               )}
-              <Button 
+              <Button
                 onClick={() => setSelectedTv(null)}
                 variant="outline"
                 className="flex-1 border-border text-foreground hover:bg-muted font-black uppercase tracking-widest h-12 rounded-xl"

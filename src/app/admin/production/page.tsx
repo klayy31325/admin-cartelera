@@ -2,13 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { ExcelImportForm } from "@/components/excel-import-form";
-import { TrabajoForm } from "@/components/trabajo-form";
-import { VelocidadForm } from "@/components/velocity-form";
-import { WasteForm } from "@/components/waste-form";
+import { TotalesForm } from "@/components/totales-form";
 import { ProductionList } from "@/components/production-list";
 import {
-  Activity, ShieldAlert, FileSpreadsheet,
-  ClipboardList, Zap, Trash2, Download
+  Activity, FileSpreadsheet,
+  ClipboardList, Download
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api-config";
 import { useAuth } from "@/components/auth-provider";
@@ -27,7 +25,7 @@ export default function ProductionPage() {
       items.push({ id: "import", label: "Importar Excel", icon: FileSpreadsheet });
     }
     if (user?.rol === "admin" || user?.rol === "editor") {
-      items.push({ id: "trabajo", label: "Carga Manual (Aux)", icon: ClipboardList });
+      items.push({ id: "trabajo", label: "Carga Manual de Totales", icon: ClipboardList });
     }
     return items;
   }, [user?.rol]);
@@ -101,16 +99,7 @@ export default function ProductionPage() {
       <section className="animate-in fade-in slide-in-from-bottom-3 duration-500">
         {activeTab === "import" && <ExcelImportForm />}
         {activeTab === "list" && <ProductionList />}
-        {activeTab === "trabajo" && (
-          <div className="space-y-4">
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-              <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest text-center">
-                Atención: Use la carga manual solo si el Excel no está disponible.
-              </p>
-            </div>
-            <TrabajoForm />
-          </div>
-        )}
+        {activeTab === "trabajo" && <TotalesForm />}
       </section>
 
       {/* Footer */}

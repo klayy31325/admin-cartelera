@@ -10,6 +10,7 @@ const velocidadRepository = require('../repositories/velocidad.repository');
 const desperdiciosRepository = require('../repositories/desperdicios.repository');
 const produccionInformativaRepository = require('../repositories/produccion_informativa.repository');
 const resumenExcelRepository = require('../repositories/resumen_excel.repository');
+const metasParadaRepository = require('../repositories/metas_parada.repository');
 
 const MOTIVOS_PARADA = [
   { id: 1, nombre: 'PREPARACION' },
@@ -163,14 +164,24 @@ router.get('/dashboard', async (req, res, next) => {
     let fallbackMonth = null;
 
     if (isMonthlyDataEmpty(monthlyData)) {
-      const prevMonth = getPreviousMonth(currentMonth);
-      const prevData = await fetchMonthlyData(prevMonth, mId);
-      
-      if (!isMonthlyDataEmpty(prevData)) {
-        monthlyData = prevData;
-        dataMonth = prevMonth;
-        fallbackMonth = prevMonth;
-        console.log(`[Dashboard] Fallback mensual activado: ${currentMonth} → ${prevMonth}`);
+      // Verificar si hay datos manuales (resumen_excel) para el mes actual
+      const hasCurrentMonthExcel = mId
+        ? !!(await resumenExcelRepository.findByMaquinaYMes(mId, currentMonth))
+        : (await resumenExcelRepository.findByMes(currentMonth)).length > 0;
+
+      if (hasCurrentMonthExcel) {
+        // No hacer fallback: los datos manuales se aplicarán vía override
+        console.log(`[Dashboard] Datos manuales detectados para ${currentMonth}, se omite fallback`);
+      } else {
+        const prevMonth = getPreviousMonth(currentMonth);
+        const prevData = await fetchMonthlyData(prevMonth, mId);
+        
+        if (!isMonthlyDataEmpty(prevData)) {
+          monthlyData = prevData;
+          dataMonth = prevMonth;
+          fallbackMonth = prevMonth;
+          console.log(`[Dashboard] Fallback mensual activado: ${currentMonth} → ${prevMonth}`);
+        }
       }
     }
 
@@ -180,8 +191,7 @@ router.get('/dashboard', async (req, res, next) => {
     if (mId) {
       resumenExcelData = await resumenExcelRepository.findByMaquinaYMes(mId, dataMonth);
     } else {
-      const todosResumen = await resumenExcelRepository.findUltimos(1);
-      resumenExcelData = todosResumen;
+      resumenExcelData = await resumenExcelRepository.findByMes(dataMonth);
     }
 
     if (resumenExcelData) {
@@ -270,6 +280,9 @@ router.get('/dashboard', async (req, res, next) => {
           _fallbackMonth: fallbackMonth
         },
         resumen_excel: resumenExcelData,
+        metas_parada: mId
+          ? await metasParadaRepository.findByMaquinaYMes(mId, dataMonth)
+          : await metasParadaRepository.findByMes(dataMonth),
         lastSync: new Date().toISOString()
       }
     });

@@ -67,6 +67,18 @@ class ResumenExcelRepository {
     return rows[0] || null;
   }
 
+  async findByMes(mes) {
+    const [rows] = await pool.execute(
+      `SELECT r.*, m.nombre AS maquina_nombre
+       FROM resumen_excel r
+       JOIN maquinas m ON r.maquina_id = m.id
+       WHERE r.mes = ?
+       ORDER BY m.nombre ASC`,
+      [mes]
+    );
+    return rows;
+  }
+
   async findUltimos(meses = 2) {
     const [rows] = await pool.execute(
       `SELECT r.*, m.nombre AS maquina_nombre

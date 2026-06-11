@@ -49,7 +49,20 @@ CREATE TABLE IF NOT EXISTS resumen_excel (
   tinta_blanco_kg DECIMAL(10,2) DEFAULT 0,
   tinta_varias_kg DECIMAL(10,2) DEFAULT 0,
   tinta_total_kg DECIMAL(10,2) DEFAULT 0,
+  vel_real_avg DECIMAL(8,2) DEFAULT 0,
+  vel_teorica_avg DECIMAL(8,2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_maquina_mes (maquina_id, mes)
+);
+
+CREATE TABLE IF NOT EXISTS metas_parada (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  maquina_id INT NOT NULL,
+  mes VARCHAR(7) NOT NULL,
+  motivo_id INT NOT NULL,
+  valor_limite DECIMAL(6,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_maquina_mes_motivo (maquina_id, mes, motivo_id)
 );
