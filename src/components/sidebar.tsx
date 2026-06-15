@@ -24,12 +24,12 @@ import { useAuth } from "@/components/auth-provider";
 import { useEffect, useState } from "react";
 
 const allMenuItems = [
-  { name: "Panel de Control", href: "/admin", icon: LayoutDashboard, roles: ["admin", "editor", "operador", "visor"] },
-  { name: "Producción", href: "/admin/production", icon: ClipboardList, roles: ["admin", "editor", "operador"] },
+  { name: "tv", href: "/admin", icon: LayoutDashboard, roles: ["admin", "editor", "operador", "visor"] },
+  { name: "Producción General", href: "/admin/production", icon: ClipboardList, roles: ["admin", "editor", "operador"] },
   { name: "Información Diaria", href: "/admin/informations", icon: Megaphone, roles: ["admin", "editor", "visor"] },
   { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList, roles: ["admin", "editor", "visor"] },
-  { name: "Logs del Sistema", href: "/admin/logs", icon: Activity, roles: ["admin", "visor"] },
-  { name: "Ajustes del Sistema", href: "/admin/settings", icon: Settings, roles: ["admin", "editor", "visor"] },
+  { name: "Historial", href: "/admin/logs", icon: Activity, roles: ["admin", "visor"] },
+  { name: "Ajustes", href: "/admin/settings", icon: Settings, roles: ["admin", "editor", "visor"] },
 ];
 
 const roleLabels: Record<string, string> = {
