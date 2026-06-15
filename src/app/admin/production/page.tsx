@@ -24,7 +24,7 @@ export default function ProductionPage() {
     if (user?.rol === "admin" || user?.rol === "editor" || user?.rol === "operador") {
       items.push({ id: "import", label: "Importar Excel", icon: FileSpreadsheet });
     }
-    if (user?.rol === "admin" || user?.rol === "editor") {
+    if (user?.rol === "admin" || user?.rol === "editor" || user?.rol === "operador") {
       items.push({ id: "trabajo", label: "Carga Manual de Totales", icon: ClipboardList });
     }
     return items;

@@ -13,6 +13,7 @@
 const XLSX = require('xlsx');
 const trabajosRepository = require('../repositories/trabajos.repository');
 const resumenExcelRepository = require('../repositories/resumen_excel.repository');
+const totalesParadasRepository = require('../repositories/totales_paradas.repository');
 const metasParadaRepository = require('../repositories/metas_parada.repository');
 const logsRepository = require('../repositories/logs.repository');
 const AppError = require('../utils/AppError');
@@ -498,6 +499,9 @@ class TrabajosService {
         }
         if (!mes) mes = new Date().toISOString().slice(0, 7);
         await resumenExcelRepository.upsert(parser.maquina_id, mes, summary);
+        if (summary.paradas) {
+          await totalesParadasRepository.upsertMany(parser.maquina_id, mes, summary.paradas);
+        }
         if (summary.metas_parada && summary.metas_parada.length > 0) {
           await metasParadaRepository.upsertMany(parser.maquina_id, mes, summary.metas_parada);
         }
@@ -544,6 +548,10 @@ class TrabajosService {
 
     await resumenExcelRepository.upsert(parser.maquina_id, mes, summary);
 
+    if (summary.paradas) {
+      await totalesParadasRepository.upsertMany(parser.maquina_id, mes, summary.paradas);
+    }
+
     if (summary.metas_parada && summary.metas_parada.length > 0) {
       await metasParadaRepository.upsertMany(parser.maquina_id, mes, summary.metas_parada);
     }
@@ -588,10 +596,14 @@ class TrabajosService {
       tinta_total_kg: data.tinta_total_kg || 0,
       vel_real_avg: data.vel_real_avg || 0,
       vel_teorica_avg: data.vel_teorica_avg || 0,
-      paradas: data.paradas || {},
     };
 
     await resumenExcelRepository.upsert(data.maquina_id, mes, payload);
+
+    // Guardar paradas en tabla normalizada
+    if (data.paradas) {
+      await totalesParadasRepository.upsertMany(data.maquina_id, mes, data.paradas);
+    }
 
     // Metas de parada: solo si se enviaron explícitamente
     if (data.metas_parada && Array.isArray(data.metas_parada) && data.metas_parada.length > 0) {
@@ -613,19 +625,30 @@ class TrabajosService {
    * Obtener resumen_excel para una máquina y mes
    */
   async getResumenTotales(maquina_id, mes) {
-    if (maquina_id && !mes) {
-      // Si solo pidieron máquina, buscar su último mes
-      const data = await resumenExcelRepository.findByMaquinaYMes(maquina_id, mes);
-      return data;
-    }
     const mId = maquina_id ? Number(maquina_id) : null;
     const targetMes = mes || new Date().toISOString().slice(0, 7);
 
     if (mId) {
-      return await resumenExcelRepository.findByMaquinaYMes(mId, targetMes);
+      const resumen = await resumenExcelRepository.findByMaquinaYMes(mId, targetMes);
+      const paradas = await totalesParadasRepository.findByMaquinaYMes(mId, targetMes);
+      if (resumen) resumen.paradas = paradas;
+      return resumen;
     }
 
-    return await resumenExcelRepository.findUltimos(2);
+    const resumenes = await resumenExcelRepository.findUltimos(2);
+    if (resumenes.length > 0) {
+      const meses = [...new Set(resumenes.map(r => r.mes))];
+      const todasParadas = await totalesParadasRepository.findByMes(meses[0]);
+      const paradasPorMaquina = {};
+      for (const p of todasParadas) {
+        if (!paradasPorMaquina[p.maquina_id]) paradasPorMaquina[p.maquina_id] = [];
+        paradasPorMaquina[p.maquina_id].push(p);
+      }
+      for (const r of resumenes) {
+        r.paradas = paradasPorMaquina[r.maquina_id] || [];
+      }
+    }
+    return resumenes;
   }
 
   /**

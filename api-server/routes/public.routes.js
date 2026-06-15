@@ -10,6 +10,7 @@ const velocidadRepository = require('../repositories/velocidad.repository');
 const desperdiciosRepository = require('../repositories/desperdicios.repository');
 const produccionInformativaRepository = require('../repositories/produccion_informativa.repository');
 const resumenExcelRepository = require('../repositories/resumen_excel.repository');
+const totalesParadasRepository = require('../repositories/totales_paradas.repository');
 const metasParadaRepository = require('../repositories/metas_parada.repository');
 
 const MOTIVOS_PARADA = [
@@ -196,7 +197,7 @@ router.get('/dashboard', async (req, res, next) => {
 
     if (resumenExcelData) {
       const overrideList = Array.isArray(resumenExcelData) ? resumenExcelData : [resumenExcelData];
-      overrideList.forEach(ex => {
+      for (const ex of overrideList) {
         const mid = Number(ex.maquina_id);
         // Override produccion mensual con valores del Excel
         if (monthlyData.produccion) {
@@ -236,29 +237,29 @@ router.get('/dashboard', async (req, res, next) => {
             despBd.total_produccion_kg = Number(ex.produccion_kg);
           }
         }
-        // Override paradas mensual con desglose del Excel (18 motivos)
+        // Override paradas mensual con desglose desde totales_paradas
         if (monthlyData.paradas) {
-          const paradasExcel = [];
-          let hasParadas = false;
-          for (const m of MOTIVOS_PARADA) {
-            const colName = 'parada_' + m.id + '_min';
-            const minutos = Number(ex[colName]) || 0;
-            if (minutos > 0) hasParadas = true;
-            paradasExcel.push({
+          const paradasDB = await totalesParadasRepository.findByMaquinaYMes(mid, dataMonth);
+          if (paradasDB && paradasDB.length > 0) {
+            const paradasExcel = paradasDB.map(p => ({
               maquina_id: mid,
               maquina_nombre: null,
-              motivo_nombre: m.nombre,
-              total_minutos: minutos,
-            });
-          }
-          // Solo reemplazar si hay datos reales en el Excel
-          if (hasParadas) {
-            // Reemplazar las paradas de esta máquina
+              motivo_nombre: p.motivo_nombre || MOTIVOS_PARADA.find(m => m.id === p.motivo_id)?.nombre,
+              total_minutos: Number(p.total_minutos),
+            }));
             const otrasMaquinas = monthlyData.paradas.filter(p => Number(p.maquina_id) !== mid);
             monthlyData.paradas = [...otrasMaquinas, ...paradasExcel];
           }
         }
-      });
+      }
+    }
+
+    // Adjuntar paradas normalizadas al objeto resumen_excel para consumidores
+    if (resumenExcelData) {
+      const list = Array.isArray(resumenExcelData) ? resumenExcelData : [resumenExcelData];
+      for (const item of list) {
+        item.paradas = await totalesParadasRepository.findByMaquinaYMes(item.maquina_id, dataMonth);
+      }
     }
 
     res.json({
@@ -301,11 +302,27 @@ router.get('/resumen-excel', async (req, res, next) => {
     const targetMes = mes || new Date().toISOString().slice(0, 7);
 
     if (maquina_id) {
-      const data = await resumenExcelRepository.findByMaquinaYMes(Number(maquina_id), targetMes);
+      const mId = Number(maquina_id);
+      const data = await resumenExcelRepository.findByMaquinaYMes(mId, targetMes);
+      if (data) {
+        data.paradas = await totalesParadasRepository.findByMaquinaYMes(mId, targetMes);
+      }
       return res.json({ success: true, data: data || null });
     }
 
     const data = await resumenExcelRepository.findUltimos(2);
+    if (data.length > 0) {
+      const meses = [...new Set(data.map(r => r.mes))];
+      const todasParadas = await totalesParadasRepository.findByMes(meses[0]);
+      const paradasPorMaquina = {};
+      for (const p of todasParadas) {
+        if (!paradasPorMaquina[p.maquina_id]) paradasPorMaquina[p.maquina_id] = [];
+        paradasPorMaquina[p.maquina_id].push(p);
+      }
+      for (const r of data) {
+        r.paradas = paradasPorMaquina[r.maquina_id] || [];
+      }
+    }
     res.json({ success: true, data });
   } catch (error) {
     next(error);
