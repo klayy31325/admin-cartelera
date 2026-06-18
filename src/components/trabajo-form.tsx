@@ -56,8 +56,9 @@ export function TrabajoForm() {
   const totalMin = (Number(watchValues.tiempo_produccion_min) || 0) + (Number(watchValues.tiempo_parada_total_min) || 0);
   const desperdicioKg = Number(watchValues.desperdicio?.cantidad_kg) || 0;
   const desperdicioMl = Number(watchValues.desperdicio?.cantidad_ml) || 0;
-  const eficiencia = watchValues.velocidad?.teorica > 0 
-    ? Math.round((watchValues.velocidad.real / watchValues.velocidad.teorica) * 100) 
+  const v = watchValues.velocidad;
+  const eficiencia = v && v.teorica > 0
+    ? Math.round((v.real / v.teorica) * 100)
     : 0;
 
   async function onSubmit(values: TrabajoFormValues) {

@@ -36,8 +36,10 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+        formatMonthDropdown: (monthNumber: number) => {
+          const date = new Date(2024, monthNumber, 1);
+          return date.toLocaleDateString("default", { month: "short" });
+        },
         ...formatters,
       }}
       classNames={{
@@ -84,7 +86,8 @@ function Calendar({
             : "[&>svg]:text-muted-foreground flex h-8 items-center gap-1 rounded-md pl-2 pr-1 text-sm [&>svg]:size-3.5",
           defaultClassNames.caption_label
         ),
-        table: "w-full border-collapse",
+        // CORRECCIÓN AQUÍ: Cambiado de month_grid a weeks para react-day-picker v9
+        weeks: cn("w-full border-collapse", defaultClassNames.weeks),
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
           "text-muted-foreground flex-1 select-none rounded-md text-[0.8rem] font-normal",
@@ -125,11 +128,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
+        Root: ({ className, ...props }) => {
           return (
             <div
               data-slot="calendar"
-              ref={rootRef}
               className={cn(className)}
               {...props}
             />

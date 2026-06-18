@@ -45,7 +45,7 @@ export function WasteForm() {
       maquina_id: 0,
       cantidad_kg: 0,
       cantidad_ml: 0,
-      comentario: "",
+      observaciones: "",
     },
   });
 
@@ -83,7 +83,7 @@ export function WasteForm() {
           "Authorization": `Bearer ${token}`
         },
       });
-      
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || "Error al registrar el desperdicio");
 
@@ -103,7 +103,7 @@ export function WasteForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-4xl mx-auto">
         <div className="bg-zinc-900/50 backdrop-blur-sm p-6 md:p-8 rounded-[2rem] border border-zinc-800 shadow-soft space-y-8">
-          
+
           <div className="flex items-center gap-3">
             <Trash2 className="text-brand" size={18} />
             <h4 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">REGISTRO DE DESPERDICIO GENERAL</h4>
@@ -120,8 +120,8 @@ export function WasteForm() {
                   <FormLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                     <Monitor size={14} /> Máquina
                   </FormLabel>
-                  <Select 
-                    onValueChange={(val) => field.onChange(parseInt(val))} 
+                  <Select
+                    onValueChange={(val) => field.onChange(parseInt(val))}
                     value={field.value ? field.value.toString() : ""}
                   >
                     <FormControl>
@@ -196,7 +196,7 @@ export function WasteForm() {
           {/* Comentario */}
           <FormField
             control={form.control}
-            name="comentario"
+            name="observaciones"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
