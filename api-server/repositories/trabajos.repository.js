@@ -498,6 +498,83 @@ class TrabajosRepository {
   }
 
   /**
+   * Agregar totales mensuales desde trabajos y tablas relacionadas
+   */
+  async getResumenAggregated(maquina_id, months) {
+    if (!months || months.length === 0) return [];
+    const placeholders = months.map(() => '?').join(',');
+    const params = [...months];
+    let whereMachine = '';
+    if (maquina_id) {
+      whereMachine = ' AND t.maquina_id = ?';
+      params.push(maquina_id);
+    }
+    const sql = `
+      SELECT
+        t.maquina_id,
+        DATE_FORMAT(t.fecha, '%Y-%m') AS mes,
+        m.nombre AS maquina_nombre,
+        COUNT(DISTINCT t.id) AS total_trabajos,
+        COALESCE(SUM(t.meta_kg), 0) AS meta_kg,
+        COALESCE(SUM(t.produccion_kg), 0) AS produccion_kg,
+        COALESCE(SUM(t.metros_producidos), 0) AS metros_ml,
+        COALESCE(SUM(t.tiempo_produccion_min), 0) AS tiempo_prod_min,
+        COALESCE(SUM(t.tiempo_parada_total_min), 0) AS tiempo_parada_min,
+        COALESCE(SUM(t.tiempo_total_min), 0) AS tiempo_total_min,
+        COALESCE(SUM(d.cantidad_kg), 0) AS desperdicio_kg,
+        COALESCE(SUM(d.cantidad_ml), 0) AS desperdicio_ml,
+        COALESCE(AVG(v.velocidad_teorica_mlmin), 0) AS vel_teorica_avg,
+        COALESCE(AVG(v.velocidad_real_mlmin), 0) AS vel_real_avg
+      FROM trabajos t
+      JOIN maquinas m ON t.maquina_id = m.id
+      LEFT JOIN desperdicios d ON d.trabajo_id = t.id
+      LEFT JOIN velocidad v ON v.trabajo_id = t.id
+      WHERE DATE_FORMAT(t.fecha, '%Y-%m') IN (${placeholders}) ${whereMachine}
+      GROUP BY t.maquina_id, DATE_FORMAT(t.fecha, '%Y-%m'), m.nombre
+      ORDER BY mes ASC, m.nombre ASC
+    `;
+    const [rows] = await pool.query(sql, params);
+    return rows.map(r => ({
+      ...r,
+      desperdicio_pct_kg: r.produccion_kg > 0 ? parseFloat(((r.desperdicio_kg / r.produccion_kg) * 100).toFixed(2)) : null,
+      desperdicio_pct_ml: r.metros_ml > 0 ? parseFloat(((r.desperdicio_ml / r.metros_ml) * 100).toFixed(2)) : null,
+      tinta_blanco_kg: 0,
+      tinta_varias_kg: 0,
+      tinta_total_kg: 0,
+    }));
+  }
+
+  /**
+   * Agregar paradas mensuales desde paradas_trabajo
+   */
+  async getParadasAggregated(maquina_id, months) {
+    if (!months || months.length === 0) return [];
+    const placeholders = months.map(() => '?').join(',');
+    const params = [...months];
+    let whereMachine = '';
+    if (maquina_id) {
+      whereMachine = ' AND t.maquina_id = ?';
+      params.push(maquina_id);
+    }
+    const sql = `
+      SELECT
+        t.maquina_id,
+        DATE_FORMAT(t.fecha, '%Y-%m') AS mes,
+        pt.motivo_id,
+        mp.nombre AS motivo_nombre,
+        COALESCE(SUM(pt.minutos), 0) AS total_minutos
+      FROM paradas_trabajo pt
+      JOIN trabajos t ON pt.trabajo_id = t.id
+      JOIN motivos_parada mp ON pt.motivo_id = mp.id
+      WHERE DATE_FORMAT(t.fecha, '%Y-%m') IN (${placeholders}) ${whereMachine}
+      GROUP BY t.maquina_id, DATE_FORMAT(t.fecha, '%Y-%m'), pt.motivo_id, mp.nombre
+      ORDER BY mes ASC, t.maquina_id ASC, pt.motivo_id ASC
+    `;
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  }
+
+  /**
    * Métricas del día para el dashboard público
    */
   async getMetricasHoy(maquina_id) {

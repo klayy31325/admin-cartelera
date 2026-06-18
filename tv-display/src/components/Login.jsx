@@ -47,7 +47,7 @@ export default function Login({ onLoginSuccess }) {
       color: 'white',
       fontFamily: 'Inter, sans-serif'
     }}>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
@@ -67,8 +67,8 @@ export default function Login({ onLoginSuccess }) {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#8b949e', textTransform: 'uppercase' }}>Correo Electrónico</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@curex.com"
@@ -87,8 +87,8 @@ export default function Login({ onLoginSuccess }) {
 
           <div style={{ marginBottom: '30px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#8b949e', textTransform: 'uppercase' }}>Contraseña</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -111,8 +111,8 @@ export default function Login({ onLoginSuccess }) {
             </div>
           )}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             style={{
               width: '100%',

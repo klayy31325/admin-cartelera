@@ -74,6 +74,23 @@ class TotalesParadasRepository {
     return rows;
   }
 
+  async findByMaquinaYMonths(maquina_id, months) {
+    if (!months || months.length === 0) return [];
+    const placeholders = months.map(() => '?').join(',');
+    let sql = `SELECT tp.*, m.nombre AS motivo_nombre
+               FROM totales_paradas tp
+               JOIN motivos_parada m ON tp.motivo_id = m.id
+               WHERE tp.mes IN (${placeholders})`;
+    const params = [...months];
+    if (maquina_id) {
+      sql += ' AND tp.maquina_id = ?';
+      params.push(maquina_id);
+    }
+    sql += ' ORDER BY tp.mes ASC, tp.maquina_id ASC, tp.motivo_id ASC';
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+  }
+
   async deleteByMaquinaYMes(maquina_id, mes) {
     await pool.execute(
       `DELETE FROM totales_paradas WHERE maquina_id = ? AND mes = ?`,

@@ -208,7 +208,7 @@ export function ProduccionInformativaManager() {
           tarea: '',
           meta_valor: '',
           descripcion_secundaria: '',
-      estado: 'pendiente',
+          estado: 'pendiente',
           fecha_asignada: new Date().toISOString().split('T')[0],
           orden: ''
         });
@@ -584,7 +584,7 @@ export function ProduccionInformativaManager() {
 
             <div className="flex justify-end pt-4">
               <Button type="submit" className="bg-brand text-white font-black px-20 h-20 rounded-xl uppercase tracking-[0.3em] text-lg hover:scale-105 transition-all shadow-2xl shadow-brand/30">
-                {editingId ? "Actualizar Tarea" : "Asignar a Unidad"}
+                {editingId ? "Actualizar Tarea" : "Asignar a maquina"}
               </Button>
             </div>
           </form>
@@ -764,7 +764,7 @@ export function ProduccionInformativaManager() {
                       <div className="flex items-center gap-2 text-brand">
                         <Cpu size={14} className="opacity-70" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                          UNIDAD {item.maquina_id} • {item.maquina_nombre}
+                          maquina • {item.maquina_nombre}
                         </span>
                       </div>
                       <h3 className={cn(

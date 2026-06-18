@@ -7,6 +7,7 @@ const routeRoles: Record<string, string[]> = {
   "/admin/informations": ["admin", "editor", "visor"],
   "/admin/produccion-informativa": ["admin", "editor", "visor"],
   "/admin/catalogs": ["admin"],
+  "/admin/usuarios": ["admin"],
   "/admin/logs": ["admin", "visor"],
   "/admin/settings": ["admin", "editor", "visor"],
 };

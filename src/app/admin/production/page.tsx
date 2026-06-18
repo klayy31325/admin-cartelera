@@ -4,23 +4,23 @@ import { useState, useMemo } from "react";
 import { ExcelImportForm } from "@/components/excel-import-form";
 import { TotalesForm } from "@/components/totales-form";
 import { ProductionList } from "@/components/production-list";
+import { ExportModal } from "@/components/export-modal";
 import {
   Activity, FileSpreadsheet,
   ClipboardList, Download
 } from "lucide-react";
-import { API_BASE_URL } from "@/lib/api-config";
 import { useAuth } from "@/components/auth-provider";
+
 
 type TabId = "import" | "list" | "trabajo";
 
 export default function ProductionPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("list");
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const TABS = useMemo(() => {
-    const items: { id: TabId; label: string; icon: typeof Activity }[] = [
-      { id: "list", label: "Bitácora Producción", icon: Activity },
-    ];
+    const items: { id: TabId; label: string; icon: typeof Activity }[] = [];
     if (user?.rol === "admin" || user?.rol === "editor" || user?.rol === "operador") {
       items.push({ id: "import", label: "Importar Excel", icon: FileSpreadsheet });
     }
@@ -31,8 +31,7 @@ export default function ProductionPage() {
   }, [user?.rol]);
 
   function handleExport() {
-    const token = localStorage.getItem("curex_token");
-    window.open(`${API_BASE_URL}/trabajos/export?token=${token}`, "_blank");
+    setShowExportModal(true);
   }
 
   return (
@@ -103,10 +102,12 @@ export default function ProductionPage() {
       </section>
 
       {/* Footer */}
-      <footer className="pt-8 border-t border-zinc-900 flex justify-between items-center text-[8px] text-zinc-700 font-bold uppercase tracking-widest">
+      <footer className="pt-8 border-t border-zinc-900 flex justify-between items-center text-[15px] text-zinc-700 font-bold uppercase tracking-widest">
         <span>Dev_Port: 042 // Billboard_Sync: Active</span>
         <span>Secured by Curex_Shield v4.2.0</span>
       </footer>
+
+      <ExportModal open={showExportModal} onOpenChange={setShowExportModal} />
     </div>
   );
 }

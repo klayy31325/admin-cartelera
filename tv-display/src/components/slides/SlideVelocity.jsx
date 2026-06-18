@@ -93,7 +93,7 @@ export default function SlideVelocity({ data, maquina, maquina_id }) {
                   MONITOR DE RENDIMIENTO
                 </p>
                 <h2 style={{ fontSize: '18px', margin: 0, color: 'var(--col-text-primary)', fontWeight: 800, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                  Velocidad en Tiempo Real
+                  Velocidad Real
                 </h2>
               </div>
             </header>

@@ -15,7 +15,7 @@ import TopBar from './TopBar';
 import ConnectionBadge from './ConnectionBadge';
 import Login from './Login';
 
-const SLIDE_DURATION = 50_000; // 50 segundos
+const SLIDE_DURATION = 60_000; // 1 minuto
 
 /* Framer-motion variants — GPU-optimized dynamic fade transition for low-power TV displays */
 const variants = {
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const [slideIdx, setSlideIdx] = useState(0);
   const [direction, setDirection] = useState(1);
   const [theme, setTheme] = useState('light');
-  
+
   // Smart TV Focus States
   const [focusZone, setFocusZone] = useState('topbar-nav'); // 'topbar-nav' | 'topbar-actions' | 'slide-content'
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -182,7 +182,7 @@ export default function Dashboard() {
     if (lastEvent) {
       console.log('[Dashboard] Evento real-time recibido:', lastEvent.type);
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      
+
       const timer = setTimeout(() => {
         refetch();
       }, 500);
@@ -324,8 +324,8 @@ export default function Dashboard() {
         return;
       }
 
-      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) || 
-                      [38, 40, 37, 39].includes(e.keyCode);
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) ||
+        [38, 40, 37, 39].includes(e.keyCode);
 
       // Activar la visualización del foco en la primera interacción de D-Pad
       if (isArrow && !showFocusVisual) {
@@ -476,13 +476,13 @@ export default function Dashboard() {
           >
             {Component ? (
               <Component
-                  data={
-                    id === 'productos' ? data?.daily :
-                      id === 'info' ? data?.info :
-                        id.startsWith('prod-info') || id.startsWith('produccion-info') ? data?.produccion_info :
-                          id === 'general' ? { ...data?.monthly, resumen_excel: data?.resumen_excel, metas_parada: data?.metas_parada } :
-                            data?.monthly
-                  }
+                data={
+                  id === 'productos' ? data?.daily :
+                    id === 'info' ? data?.info :
+                      id.startsWith('prod-info') || id.startsWith('produccion-info') ? data?.produccion_info :
+                        id === 'general' ? { ...data?.monthly, resumen_excel: data?.resumen_excel, metas_parada: data?.metas_parada } :
+                          data?.monthly
+                }
                 velocity={
                   id.startsWith('vel') ? data?.daily?.velocidad?.series :
                     id === 'general' ? data?.monthly?.velocidad :
@@ -512,7 +512,7 @@ export default function Dashboard() {
       {/* Technical Footer Bar */}
       <footer className="tv-footer">
         <div className="tv-footer__meta">
-          <span><span style={{ color: 'var(--col-brand)' }}>●</span> UNIDAD: {tvConfig?.maquina_nombre || 'CUREX-SYS-01'}</span>
+          <span><span style={{ color: 'var(--col-brand)' }}>●</span> MAQUINA: {tvConfig?.maquina_nombre || 'CUREX-SYS-01'}</span>
           <span>UID: {localStorage.getItem('tv_uid')?.substring(0, 8)}</span>
           <span>LOCATION: {tvConfig?.maquina_nombre ? `LINEA ${tvConfig.maquina_nombre}` : 'PLANTA GENERAL'}</span>
         </div>

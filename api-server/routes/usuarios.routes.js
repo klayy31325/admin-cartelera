@@ -9,7 +9,7 @@ const { ROLES } = require('../utils/constants');
 const router = Router();
 
 // ── CRUD de Usuarios ──
-router.post('/', usuariosController.create);                           // POST   /api/usuarios  (público — registro desde login)
+router.post('/', verifyToken, authorize(ROLES.ADMIN), usuariosController.create);  // POST   /api/usuarios (solo admin)
 router.get('/', verifyToken, authorize(ROLES.ADMIN), usuariosController.getAll);
 router.get('/:id', verifyToken, authorize(ROLES.ADMIN), usuariosController.getById);
 router.put('/:id', verifyToken, authorize(ROLES.ADMIN), usuariosController.update);

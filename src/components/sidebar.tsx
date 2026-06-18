@@ -28,6 +28,7 @@ const allMenuItems = [
   { name: "Producción General", href: "/admin/production", icon: ClipboardList, roles: ["admin", "editor", "operador"] },
   { name: "Información Diaria", href: "/admin/informations", icon: Megaphone, roles: ["admin", "editor", "visor"] },
   { name: "Producción Informativa", href: "/admin/produccion-informativa", icon: ClipboardList, roles: ["admin", "editor", "visor"] },
+  { name: "Usuarios", href: "/admin/usuarios", icon: ShieldCheck, roles: ["admin"] },
   { name: "Historial", href: "/admin/logs", icon: Activity, roles: ["admin", "visor"] },
   { name: "Ajustes", href: "/admin/settings", icon: Settings, roles: ["admin", "editor", "visor"] },
 ];

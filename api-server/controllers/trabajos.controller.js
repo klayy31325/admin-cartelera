@@ -103,8 +103,8 @@ class TrabajosController {
   async exportExcel(req, res, next) {
     try {
       const { maquina_id, fecha_inicio, fecha_fin } = req.query;
-      const buffer = await trabajosService.exportToExcel({ maquina_id, fecha_inicio, fecha_fin });
-      res.setHeader('Content-Disposition', 'attachment; filename=produccion_export.xlsx');
+      const buffer = await trabajosService.exportResumenExcel({ maquina_id, fecha_inicio, fecha_fin });
+      res.setHeader('Content-Disposition', 'attachment; filename=produccion_resumen.xlsx');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.send(buffer);
     } catch (error) { next(error); }

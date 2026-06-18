@@ -59,6 +59,23 @@ class ResumenExcelRepository {
     return rows;
   }
 
+  async findByMonths(maquina_id, months) {
+    if (!months || months.length === 0) return [];
+    const placeholders = months.map(() => '?').join(',');
+    let sql = `SELECT r.*, m.nombre AS maquina_nombre
+               FROM resumen_excel r
+               JOIN maquinas m ON r.maquina_id = m.id
+               WHERE r.mes IN (${placeholders})`;
+    const params = [...months];
+    if (maquina_id) {
+      sql += ' AND r.maquina_id = ?';
+      params.push(maquina_id);
+    }
+    sql += ' ORDER BY r.mes ASC, m.nombre ASC';
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+  }
+
   async findUltimos(meses = 2) {
     const [rows] = await pool.execute(
       `SELECT r.*, m.nombre AS maquina_nombre

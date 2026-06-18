@@ -54,6 +54,8 @@ export function ExcelImportForm() {
     if (!maquina) return toast.error("Selecciona la máquina");
 
     setIsLoading(true);
+    const toastId = toast.loading(preview ? "Analizando archivo Excel..." : "Importando datos desde Excel...");
+
     try {
       const token = localStorage.getItem("curex_token");
       const formData = new FormData();
@@ -67,9 +69,11 @@ export function ExcelImportForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || "Error en la importación");
 
+      toast.dismiss(toastId);
+
       if (preview) {
         setPreviewData(data.data.preview || []);
-        toast.success(`Vista previa: ${data.data.preview?.length ?? 0} trabajos encontrados`);
+        toast.success(`Vista previa: ${data.data.preview?.length ?? 0} trabajos encontrados en el Excel`);
       } else {
         setResult(data.data);
         setPreviewData(null);
@@ -77,17 +81,19 @@ export function ExcelImportForm() {
         const hasErrors = data.data.errores && data.data.errores.length > 0;
         const hasDuplicates = data.data.duplicados > 0;
         if (hasErrors) {
-          toast.warning(`Importación parcial: ${data.data.insertados} guardados, ${data.data.duplicados} duplicados omitidos, ${data.data.errores.length} fallaron`, {
-            duration: 5000,
-          });
+          toast.warning(
+            `Importación parcial: ${data.data.insertados} guardados, ${data.data.duplicados} duplicados omitidos, ${data.data.errores.length} filas con errores`,
+            { duration: 6000 }
+          );
         } else if (hasDuplicates) {
-          toast.success(`Importación completada: ${data.data.insertados} guardados, ${data.data.duplicados} duplicados omitidos`);
+          toast.success(`Importación completada: ${data.data.insertados} trabajos guardados, ${data.data.duplicados} duplicados omitidos`);
         } else {
-          toast.success(`Importación exitosa: ${data.data.insertados} registros guardados`);
+          toast.success(`Importación exitosa: ${data.data.insertados} trabajos registrados correctamente`);
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error desconocido");
+      toast.dismiss(toastId);
+      toast.error(err instanceof Error ? err.message : "Error desconocido al procesar el archivo");
     } finally {
       setIsLoading(false);
     }

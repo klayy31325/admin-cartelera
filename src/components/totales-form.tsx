@@ -73,6 +73,8 @@ export function TotalesForm() {
       values.metas_parada = undefined;
     }
     setIsSubmitting(true);
+    const toastId = toast.loading(`Guardando totales de ${values.mes} para ${maquinaNombre}...`);
+
     try {
       const token = localStorage.getItem("curex_token");
       const res = await fetch(`${API_BASE_URL}/trabajos/totales`, {
@@ -86,7 +88,8 @@ export function TotalesForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || "Error al guardar totales");
 
-      toast.success(`Totales de ${values.mes} guardados correctamente`);
+      toast.dismiss(toastId);
+      toast.success(`Datos totales de ${maquinaNombre} — ${values.mes} cargados correctamente`);
       form.reset({
         maquina_id: values.maquina_id,
         mes: values.mes,
@@ -101,7 +104,8 @@ export function TotalesForm() {
         metas_parada: MOTIVOS_PARADA.map(m => ({ motivo_id: m.id, valor_limite: 0 })),
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fallo en la conexión");
+      toast.dismiss(toastId);
+      toast.error(err instanceof Error ? err.message : "Fallo en la conexión al guardar totales");
     } finally {
       setIsSubmitting(false);
     }

@@ -303,26 +303,28 @@ const TaskCard = ({ item, index, isFocused, isFirstActive, onStatusClick }) => {
         {formattedFecha}
       </div>
 
-      {/* Número de Orden */}
+      {/* Número de Orden / Check Completado */}
       <div
         style={{
           width: 42,
           height: 42,
           borderRadius: 12,
-          background: isFirstActive
-            ? 'var(--col-brand)'
-            : 'var(--col-gauge-track)',
+          background: isCompletado
+            ? '#00f80cff'
+            : isFirstActive
+              ? 'var(--col-brand)'
+              : 'var(--col-gauge-track)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '18px',
           fontWeight: 900,
-          color: isFirstActive ? '#ffffff' : 'var(--col-text-primary)',
+          color: isCompletado ? '#ffffff' : isFirstActive ? '#ffffff' : 'var(--col-text-primary)',
           flexShrink: 0,
-          boxShadow: isFirstActive ? '0 4px 12px var(--col-brand-glow)' : 'none',
+          boxShadow: isCompletado ? '0 4px 12px rgba(34, 112, 37, 1)' : isFirstActive ? '0 4px 12px var(--col-brand-glow)' : 'none',
         }}
       >
-        {item.orden || '-'}
+        {isCompletado ? <CheckCircle2 size={22} /> : (item.orden || '-')}
       </div>
 
       {/* Contenido de la Tarea */}

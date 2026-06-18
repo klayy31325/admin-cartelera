@@ -135,7 +135,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
     if (totalPages <= 1) return;
     const interval = setInterval(() => {
       setCurrentPage((prev) => (prev + 1) % totalPages);
-    }, 3000);
+    }, 25000);
     return () => clearInterval(interval);
   }, [totalPages]);
 
@@ -199,7 +199,7 @@ export default function SlideGeneralDashboard({ data, isLoading, isMonthly, maqu
 
       <section className="tv-panel-clean slide-general__chart">
         {maquina && (
-          <div className="tv-unit-badge">UNIDAD: {maquina}</div>
+          <div className="tv-unit-badge">MAQUINA: {maquina}</div>
         )}
 
         <header className="slide-general__chart-header">

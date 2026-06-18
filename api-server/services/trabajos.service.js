@@ -650,68 +650,181 @@ class TrabajosService {
     }
     return resumenes;
   }
-
   /**
-   * Exportar trabajos a Excel consolidado con todos los parámetros
+   * Exportar Excel con resumen mensual y totales paradas
    */
-  async exportToExcel(filters) {
-    const trabajos = await trabajosRepository.findAllDetailed(filters);
-    const motivos = MOTIVOS_EXCEL_MAP.sort((a, b) => a.id - b.id);
+  async exportResumenExcel(filters) {
+    const { maquina_id, fecha_inicio, fecha_fin } = filters;
 
-    const wb = XLSX.utils.book_new();
+    const hoy = new Date();
+    const mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+    const defaultInicio = mesActual + '-01';
+    const defaultFin = mesActual + '-' + String(ultimoDia).padStart(2, '0');
 
-    const headers = [
-      'Pedido', 'Máquina', 'Fecha', 'Cliente', 'Producto', 'Destino', 'Estado',
-      'Meta Kg', 'Metros Reales', 'T. Producción (min)', 'T. Parada (min)', 'T. Total Turno (min)',
-      'Vel. Real (m/min)', 'Vel. Teórica (m/min)', '% Rendimiento',
-      'Desperdicio Kg', 'Desperdicio M/L', 'Tinta Consumida (Kg)', 'Solvente (Lts)', 'Comentario Desperdicio',
-      ...motivos.map(m => m.nombre || `MOTIVO_${m.id}`),
-      'Observaciones'
+    const fInicio = fecha_inicio || defaultInicio;
+    const fFin = fecha_fin || defaultFin;
+
+    const maquinaIds = maquina_id ? [Number(maquina_id)] : [1, 2];
+    const mapaMaquinas = { 1: 'OLYMPIA', 2: 'NOVOFLEX' };
+
+    const startDate = new Date(fInicio + 'T00:00:00');
+    const endDate = new Date(fFin + 'T00:00:00');
+    const months = [];
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      months.push(current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0'));
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    const motivosLookup = {};
+    for (const m of MOTIVOS_EXCEL_MAP) {
+      motivosLookup[m.id] = m.nombre || 'MOTIVO_' + m.id;
+    }
+
+    // ── 1. Obtener datos de resumen_excel (pre-cargados por importación) ──
+    const resumenFromDb = {};  // key: "maquinaId:mes"
+    const paradasFromDb = {};  // key: "maquinaId:mes" → array
+
+    for (const mId of maquinaIds) {
+      const resumenes = await resumenExcelRepository.findByMonths(mId, months);
+      for (const r of resumenes) {
+        resumenFromDb[mId + ':' + r.mes] = r;
+      }
+      const paradas = await totalesParadasRepository.findByMaquinaYMonths(mId, months);
+      for (const p of paradas) {
+        const key = mId + ':' + p.mes;
+        if (!paradasFromDb[key]) paradasFromDb[key] = [];
+        paradasFromDb[key].push(p);
+      }
+    }
+
+    // ── 2. Fallback: agregar desde trabajos si no hay resumen_excel ──
+    if (Object.keys(resumenFromDb).length === 0) {
+      const aggregated = await trabajosRepository.getResumenAggregated(
+        maquinaIds.length === 1 ? maquinaIds[0] : null,
+        months
+      );
+      for (const a of aggregated) {
+        resumenFromDb[a.maquina_id + ':' + a.mes] = a;
+      }
+    }
+
+    if (Object.keys(paradasFromDb).length === 0) {
+      const aggregatedParadas = await trabajosRepository.getParadasAggregated(
+        maquinaIds.length === 1 ? maquinaIds[0] : null,
+        months
+      );
+      for (const p of aggregatedParadas) {
+        const key = p.maquina_id + ':' + p.mes;
+        if (!paradasFromDb[key]) paradasFromDb[key] = [];
+        paradasFromDb[key].push(p);
+      }
+    }
+
+    // ── 3. Construir filas del Excel ──
+    const resumenRows = [];
+    const paradasRows = [];
+
+    for (const mId of maquinaIds) {
+      for (const mes of months) {
+        const r = resumenFromDb[mId + ':' + mes];
+        if (!r) continue;
+        resumenRows.push([
+          mapaMaquinas[mId] || 'MAQUINA ' + mId,
+          mes,
+          r.meta_kg ?? 0,
+          r.produccion_kg ?? 0,
+          r.metros_ml ?? 0,
+          r.tiempo_prod_min ?? 0,
+          r.tiempo_parada_min ?? 0,
+          r.tiempo_total_min ?? 0,
+          r.desperdicio_kg ?? 0,
+          r.desperdicio_ml ?? 0,
+          r.desperdicio_pct_kg ?? null,
+          r.desperdicio_pct_ml ?? null,
+          r.total_trabajos ?? 0,
+          r.tinta_blanco_kg ?? 0,
+          r.tinta_varias_kg ?? 0,
+          r.tinta_total_kg ?? 0,
+          r.vel_real_avg ?? 0,
+          r.vel_teorica_avg ?? 0,
+        ]);
+      }
+
+      for (const mes of months) {
+        const paradas = paradasFromDb[mId + ':' + mes] || [];
+        for (const p of paradas) {
+          paradasRows.push([
+            mapaMaquinas[mId] || 'MAQUINA ' + mId,
+            mes,
+            p.motivo_nombre || motivosLookup[p.motivo_id] || 'MOTIVO_' + p.motivo_id,
+            p.total_minutos ?? 0,
+          ]);
+        }
+      }
+    }
+
+    const maquinaLabel = maquina_id
+      ? (mapaMaquinas[Number(maquina_id)] || 'MAQUINA ' + maquina_id)
+      : 'TODAS LAS MAQUINAS';
+
+    const titleRow = ['REPORTE DE PRODUCCION - RESUMEN MENSUAL'];
+    const periodRow = ['Periodo: ' + fInicio + ' a ' + fFin];
+    const machineRow = ['Maquina: ' + maquinaLabel];
+    const emptyRow = [];
+
+    const resumenHeader = ['=== RESUMEN MENSUAL ==='];
+    const resumenCols = [
+      'Maquina', 'Mes', 'Meta Kg', 'Produccion Kg', 'Metros ML',
+      'T.Produccion (min)', 'T.Parada (min)', 'T.Total (min)',
+      'Desperdicio Kg', 'Desperdicio ML', '% Desp Kg', '% Desp ML',
+      'Total Trabajos', 'Tinta Blanco Kg', 'Tinta Varias Kg', 'Tinta Total Kg',
+      'Vel Real Prom', 'Vel Teorica Prom'
     ];
 
-    const rows = trabajos.map(t => {
-      const velTeorica = t.velocidad?.velocidad_teorica_mlmin || t.velocidad?.teorica || 0;
-      const velReal = t.velocidad?.velocidad_real_mlmin || t.velocidad?.real || 0;
-      const rendimiento = velTeorica > 0
-        ? ((velReal / velTeorica) * 100).toFixed(1) + '%'
-        : '0%';
+    const paradasHeader = ['=== TOTALES PARADAS ==='];
+    const paradasCols = ['Maquina', 'Mes', 'Motivo', 'Total Minutos'];
 
-      const paradasCols = motivos.map(m => {
-        const p = t.paradas?.find(p => p.motivo_id === m.id);
-        return p ? p.minutos : 0;
-      });
+    const wsData = [
+      titleRow,
+      periodRow,
+      machineRow,
+      emptyRow,
+      resumenHeader,
+      resumenCols,
+      ...resumenRows,
+      emptyRow,
+      emptyRow,
+      paradasHeader,
+      paradasCols,
+      ...paradasRows,
+    ];
 
-      const despInfo = parseDesperdicioComentario(t.desperdicio?.comentario);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-      return [
-        t.numero_pedido, t.maquina_nombre, t.fecha, t.cliente, t.producto, t.destino, t.status_orden,
-        t.meta_kg, t.metros_producidos, t.tiempo_produccion_min, t.tiempo_parada_total_min, t.tiempo_total_min,
-        velReal || 0, velTeorica || 0, rendimiento,
-        t.desperdicio?.cantidad_kg || 0,
-        t.desperdicio?.cantidad_ml || 0,
-        despInfo.tinta,
-        despInfo.solvente,
-        t.desperdicio?.comentario || '',
-        ...paradasCols,
-        t.observaciones || ''
-      ];
-    });
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
+      { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 },
+    ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws['!cols'] = headers.map(() => ({ wch: 15 }));
-    XLSX.utils.book_append_sheet(wb, ws, 'REPORTE_CONSOLIDADO');
+    XLSX.utils.book_append_sheet(wb, ws, 'RESUMEN_MENSUAL');
 
     try {
       await logsRepository.create({
         usuario_id: null,
         accion: 'EXPORT',
-        descripcion: `[EXPORTACIÓN] Reporte consolidado generado (${trabajos.length} registros).`,
+        descripcion: '[EXPORTACION] Reporte resumen mensual generado (' + resumenRows.length + ' meses, ' + paradasRows.length + ' registros de paradas).',
         tipo: 'info'
       });
     } catch (e) { /* swallow */ }
 
     return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   }
+
 
   /**
    * Verifica que los datos del Excel coincidan con la DB sin importar.
